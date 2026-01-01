@@ -46,3 +46,8 @@ MemoryBlock &SSBOBuffer::AddData(size_t size, const void *data)
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, block.offset, size, data);
     return block;
 }
+
+void SSBOBuffer::OverWrite(size_t offset, size_t size, const void *data){
+    Bind();
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, size, data);
+}

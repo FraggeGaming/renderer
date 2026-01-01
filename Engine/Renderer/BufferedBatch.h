@@ -59,6 +59,7 @@ public:
     void Bind();
     void Draw();
     void ClearBufferedData();
+    void SetDrawVector(std::vector<GPUMemoryHandle> commands);
     void UpdateCommandBuffer();
     GPUMemoryHandle Load(BufferedMesh& m, glm::mat4 t);
     

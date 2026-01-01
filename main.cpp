@@ -71,11 +71,10 @@ void CreateController(Engine& engine, Entity e_ptr){
     // });
 
      //Rotate arround y negaitve
-     ctx.input->BindKey(GLFW_KEY_DOWN,KEY_PRESS_TYPE::CONT ,[&](float dt){
+     ctx.input->BindKey(GLFW_KEY_DOWN,KEY_PRESS_TYPE::CONT ,[&engine, e_ptr, rotateSpeed](float dt){
         TransformComponent& transform = engine.ecs->GetComponent<TransformComponent>(e_ptr);
         transform.AddRotation(glm::vec3(rotateSpeed * dt,0 , 0));
-        // dirtyTransform = true;
-        // FlagForUpdate(true);
+
      });
 
 
@@ -139,7 +138,7 @@ void CreateController(Engine& engine, Entity e_ptr){
 
     
 
-   ctx.input->BindKey(GLFW_KEY_W,KEY_PRESS_TYPE::CONT ,[cam_ptr, cameraSpeed](float dt){
+    ctx.input->BindKey(GLFW_KEY_W,KEY_PRESS_TYPE::CONT ,[cam_ptr, cameraSpeed](float dt){
         cam_ptr->MoveFPS( cameraSpeed*dt, FPSDirection::FORWARD);
     });
 
@@ -166,9 +165,21 @@ void CreateController(Engine& engine, Entity e_ptr){
 }
 
 void TestEngine(){
+
+    
+
+    
     Engine engine = Engine();
 
     engine.CreateWindow();
+
+    const GLubyte* renderer = glGetString(GL_RENDERER); // GPU name
+    const GLubyte* vendor = glGetString(GL_VENDOR);     // NVIDIA/AMD/Intel
+    const GLubyte* version = glGetString(GL_VERSION);   // OpenGL version
+
+    std::cout << "GPU: " << renderer << std::endl;
+    std::cout << "Vendor: " << vendor << std::endl;
+    std::cout << "Version: " << version << std::endl;
 
     engine.InitModalities();
 

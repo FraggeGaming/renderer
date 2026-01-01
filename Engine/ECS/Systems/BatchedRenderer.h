@@ -18,7 +18,6 @@ class BatchedRenderer : public System{
 
     void Remove(BufferedMesh& e);
 
-    void UpdateTransform(glm::mat4& t);
 
     void SetProjection(glm::mat4 mat);
 

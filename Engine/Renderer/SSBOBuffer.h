@@ -18,5 +18,5 @@ public:
     void Bind() const;
     MemoryBlock& AddData(size_t size, const void* data);
     void UnBind() const;
-
+    void OverWrite(size_t offset, size_t size, const void *data);
 };

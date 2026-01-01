@@ -40,7 +40,7 @@ void Engine::CreateWindow()
     }
 
 
-    std::cout << "Requesting OpenGL 6 core profile..." << std::endl;
+    std::cout << "Requesting OpenGL 4.6 core profile..." << std::endl;
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

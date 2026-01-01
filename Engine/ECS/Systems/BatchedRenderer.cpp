@@ -53,17 +53,6 @@ void BatchedRenderer::Remove(BufferedMesh& e)
 
 }
 
-void BatchedRenderer::UpdateTransform(glm::mat4 &t)
-{
-    std::cout << "Adding mesh" << std::endl;
-    //Add mesh first because the ssbo use the transform as instanceindex
-    
-
-    //e.batchTransformIndex = batch->AddTransform(t);
-
-    //batch->UpdateCommandBuffer();
-}
-
 void BatchedRenderer::SetProjection(glm::mat4 mat)
 {
 }
@@ -93,8 +82,9 @@ void BatchedRenderer::Update(float dt)
 
         // 4. Update SSBO Transform if dirty
         if (t.isDirty) {
-            //UpdateSSBOSlot(m.ssboIndex, transform.matrix);
+            batch->UpdateTransform(m.ssboIndex, t.GetCombined());
             t.isDirty = false;
+            //std::cout << "Updated Transform in ssbo" << std::endl;
         }
 
         // 5. Add a command to the batch
@@ -104,7 +94,9 @@ void BatchedRenderer::Update(float dt)
 
     });
 
-    batch->drawCommands = drawCommands;
+    
+    batch->SetDrawVector(drawCommands);
+    //batch->drawCommands = drawCommands;
 
     // if (isDirty)
     // {

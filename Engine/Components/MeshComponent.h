@@ -4,5 +4,5 @@
 struct MeshComponent{
     
     Mesh MeshComponent;
-    int batchTransformIdx = 0;
+    bool isDirty = false;
 };

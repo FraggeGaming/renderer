@@ -17,7 +17,7 @@ BufferedBatch::BufferedBatch(Shader shader)
     glGenBuffers(1, &indBuffer);
 
     //ssbo for passing transforms to the shader
-    glGenBuffers(1, &ssbo);
+    //glGenBuffers(1, &ssbo);
     
 }
 
@@ -35,8 +35,7 @@ int BufferedBatch::AddTransform(glm::mat4 t)
 
 void BufferedBatch::UpdateTransform(int idx, glm::mat4 t)
 {
-
-    transforms[idx] = t;
+    ssboBuffer.OverWrite(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
 }
 
 GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, glm::mat4 t)  
@@ -143,11 +142,8 @@ void BufferedBatch::Bind()
     //bind ssbo for transforms
 
     ssboBuffer.Bind();
-    // glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    // glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::mat4) * transforms.size(), transforms.data(), GL_DYNAMIC_COPY);
-    // glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, ssbo);
 
-    UpdateCommandBuffer();
+    //UpdateCommandBuffer();
 
 }
 
@@ -200,40 +196,17 @@ void BufferedBatch::Draw()
 
 // }
 
-void BufferedBatch::UpdateCommandBuffer(){
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
-        glBufferData(GL_DRAW_INDIRECT_BUFFER,
-             drawCommands.size() * sizeof(GPUMemoryHandle),
-             drawCommands.data(),
-             GL_DYNAMIC_DRAW);
+void BufferedBatch::SetDrawVector(std::vector<GPUMemoryHandle> commands)
+{
+    drawCommands = commands;
+    UpdateCommandBuffer();
 }
 
-
-/*This should be changed to a better alternative than recreating the whole buffer*/
-// void BufferedBatch::ClearAndRebuild(const std::vector<std::unique_ptr<Entity>> &entities)
-// {
-//     ClearBufferedData();
-
-//     // for(const auto& entity_ptr : entities){
-//     //     if (entity_ptr && entity_ptr->hasMesh) {
-//     //         const Entity& entity = *entity_ptr;
-            
-//     //         AddMesh(entity.mesh); 
-    
-//     //         entity_ptr->batchTransformIndex = AddTransform(entity.transform.GetCombined()); 
-//     //     }
-//     // }
-    
-//     UpdateCommandBuffer();
-
-//     Bind();
-// }
-
-// void Batch::Append(Entity &e)
-// {
-//     entities.push_back(e.GetHandle());
-
-//     MeshComponent& meshComp = e.GetComponent<MeshComponent>();
-//     AddMesh(meshComp.MeshComponent);
-//     meshComp.batchTransformIdx = AddTransform(e.GetComponent<TransformComponent>().GetCombined());
-// }
+void BufferedBatch::UpdateCommandBuffer()
+{
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
+    glBufferData(GL_DRAW_INDIRECT_BUFFER,
+                 drawCommands.size() * sizeof(GPUMemoryHandle),
+                 drawCommands.data(),
+                 GL_DYNAMIC_DRAW);
+}
