@@ -45,7 +45,7 @@ void Engine::CreateWindow()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    window = glfwCreateWindow(height,width,"Computer Graphics", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "Computer Graphics", nullptr, nullptr);
     if(!window){
         std::cerr << "Failed to create window";
         glfwTerminate();
@@ -56,6 +56,8 @@ void Engine::CreateWindow()
     std::cout << "GL Version: " << glGetString(GL_VERSION) << std::endl;
     std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
 
+    // Ensure modern OpenGL functions are exposed by GLEW on core profiles
+    glewExperimental = GL_TRUE;
     if(glewInit() != GLEW_OK){
         std::cerr << "Failed to init GLEW";
 

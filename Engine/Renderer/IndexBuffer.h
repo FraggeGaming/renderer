@@ -8,6 +8,7 @@ private:
     unsigned int m_RendererID;
     unsigned int m_Count;
     Heap heap;
+    size_t m_Size = 0;
 
 
 public:
@@ -23,5 +24,10 @@ public:
     void UnBind() const;
     void Clear();
     inline unsigned int GetCount() const{ return m_Count;}
+
+    // Resize the GPU index buffer to newSize bytes, preserving contents
+    void Resize(size_t newSize);
+    // Current GPU buffer size in bytes
+    size_t GetSize() const { return m_Size; }
 
 };

@@ -206,33 +206,48 @@ void TestEngine(){
     reader.SetReadParam(ObjReader::TEXCORD, true);
     reader.SetReadParam(ObjReader::NORMAL, true);
 
+    AssetManager& assetManager = engine.assetManager;
+
     Mesh mesh  = reader.ReadObject("Res/ObjFiles/OBJ_Files/suzanne.obj");
+    int mid = assetManager.Add(mesh);
+    
     std::cout << "Wow" << std::endl;
 
-    Entity e = engine.ecs->CreateEntity();
-    BufferedMesh m = BufferedMesh();
-    m.MeshComponent = mesh;
-    engine.ecs->AddComponent(e, m);
+    {
+        Entity e = engine.ecs->CreateEntity();
+        BufferedMesh m = BufferedMesh();
+        m.meshID = mid;
 
-    TransformComponent transform = TransformComponent();
-    engine.ecs->AddComponent(e, transform);
-    engine.ecs->AddComponent(e, Player());
-    
+        engine.ecs->AddComponent(e, m);
 
-  
-    std::cout << "Wow222" << std::endl;
+        TransformComponent transform = TransformComponent();
+        engine.ecs->AddComponent(e, transform);
+        CreateController(engine, e);
+
+    }
+
     Mesh me  = reader.ReadObject("Res/ObjFiles/OBJ_Files/pokeball.obj");
-    
-    Entity e1 = engine.ecs->CreateEntity();
-    BufferedMesh m1 = BufferedMesh();
-    m1.MeshComponent = me;
-    engine.ecs->AddComponent(e1, m1);
-    
-    TransformComponent transform1 = TransformComponent();
-    transform1.Translate(5, 0, 0);
-    engine.ecs->AddComponent(e1, transform1);
+    int meid = assetManager.Add(me);
 
-    CreateController(engine, e1);
+
+    for (size_t i = 0; i < 100; i++)
+    {
+        for (size_t j = 0; j < 100; j++)
+        {
+            Entity e = engine.ecs->CreateEntity();
+            BufferedMesh m = BufferedMesh();
+            m.meshID = meid;
+
+            engine.ecs->AddComponent(e, m);
+
+            TransformComponent transform = TransformComponent();
+            transform.Translate(2 + i*2, 0, 2 + j * 2 );
+            engine.ecs->AddComponent(e, transform);
+        }
+    }
+    
+    
+
 
     //Set input
 

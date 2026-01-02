@@ -30,4 +30,5 @@ struct Vertex {
 struct Mesh{
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
+    int id = 0;
 };

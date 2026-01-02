@@ -6,9 +6,13 @@ layout(location = 1)in vec2 a_texCord;
 layout(location = 2)in vec3 a_normal;
 layout(location = 3)in vec4 a_Color;
 
-layout(std430, binding = 3) buffer TransformSSBO
+layout(std430, binding = 0) readonly buffer InstanceBuffer
 {
-    mat4 ssbo_Models[];
+    mat4 model[];
+};
+
+layout(std430, binding = 1) readonly buffer VisibleInstanceBuffer {
+    uint transformIndices[];
 };
 
 
@@ -25,7 +29,11 @@ out vec3 Normal;
 void main()
 {
     v_Color = a_Color; // to visualize normals, vec4(a_normal * 0.5 + 0.5, 0.5)
-    vec4 worldPos = ssbo_Models[gl_DrawID] * vec4(a_position.xyz, 1.0);
+
+    uint lookupIdx = gl_BaseInstance + gl_InstanceID;
+    uint actualTransformIdx = transformIndices[lookupIdx];
+    mat4 m = model[actualTransformIdx];
+    vec4 worldPos = m * vec4(a_position.xyz, 1.0);
     gl_Position = projection * view * worldPos;
     FragPos = worldPos.xyz; 
    
@@ -35,7 +43,7 @@ void main()
    //mat3 normalMatrix3 = mat3(normalMatrix4);
     
     
-    Normal = mat3(transpose(inverse(ssbo_Models[gl_DrawID]))) * a_normal;  
+    Normal = mat3(transpose(inverse(m))) * a_normal;  
 
 }
 

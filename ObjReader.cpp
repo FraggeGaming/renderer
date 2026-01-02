@@ -12,7 +12,7 @@
     #define DBG(x)
 #endif
 
-
+int meshID = 0;
 
 ObjReader::ObjReader()
 {
@@ -255,6 +255,8 @@ Mesh ObjReader::ReadObject(const std::string &path)
 
     
     NormalizeMesh(mesh);
+    
+    mesh.id = meshID++;
     
     return mesh;
 }
