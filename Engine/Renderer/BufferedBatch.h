@@ -19,7 +19,7 @@
 #include "../Components/GPUMemoryHandle.h"
 
 
-
+using Entity = int;
 
 class BufferedBatch{
 public:
@@ -46,6 +46,7 @@ public:
     //for ssbo
     unsigned int ssbo = 0;
 
+    std::unordered_map<int, Entity> meshInstances;
 
     BufferedBatch(Shader shader);
     ~BufferedBatch();

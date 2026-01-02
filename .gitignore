@@ -1,0 +1,13 @@
+main.exe
+main.o
+ObjReader.o
+Engine/Engine.o
+Engine/InputHandler.o
+Engine/ECS/Systems/BatchedRenderer.o
+Engine/Math/Math.o
+Engine/Renderer/BufferedBatch.o
+Engine/Renderer/IndexBuffer.o
+Engine/Renderer/SSBOBuffer.o
+Engine/Renderer/VertexArray.o
+Engine/Renderer/VertexBuffer.o
+Engine/Shader/Shader.o
