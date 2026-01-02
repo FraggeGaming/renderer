@@ -81,6 +81,10 @@ void BatchedRenderer::Update(float dt)
 
 
     ecs->view<BufferedMesh, GPUMemoryHandle, TransformComponent>().each([&](int entityId, BufferedMesh& m, GPUMemoryHandle& h, TransformComponent& t) {
+        
+        // 3. Frustum Culling
+        //if (!cam.IsVisible(transform.bounds)) continue;
+        
         if (t.isDirty) {
             batch->UpdateTransform(h.ssboIndex, t.GetCombined());
             t.isDirty = false;
@@ -107,36 +111,6 @@ void BatchedRenderer::Update(float dt)
     batch->UpdateInstanceLookupBuffer(lookupTable);
     batch->SetDrawVector(finalCommands);
     
-
-    /*
-    std::vector<GPUMemoryHandle> drawCommands;
-
-    ecs->view<GPUMemoryHandle, TransformComponent>().each([&](int entityId, GPUMemoryHandle& m, TransformComponent& t) {
-        
-
-        // 3. Frustum Culling (Optional but recommended)
-        //if (!cam.IsVisible(transform.bounds)) continue;
-
-        
-
-        // 4. Update SSBO Transform if dirty
-        if (t.isDirty) {
-            batch->UpdateTransform(m.ssboIndex, t.GetCombined());
-            t.isDirty = false;
-            //std::cout << "Updated Transform in ssbo" << std::endl;
-        }
-
-        // 5. Add a command to the batch
-
-
-        drawCommands.push_back(m);
-
-    });
-
-    
-    //batch->SetDrawVector(drawCommands);
-
-    */
 
 
     SetCamera(engine->camera.GetView());

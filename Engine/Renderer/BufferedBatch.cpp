@@ -21,10 +21,6 @@ BufferedBatch::BufferedBatch(Shader shader, size_t vertexBufferBytes, size_t ind
 
     //For lookuptable
     glGenBuffers(1, &lookupBuffer);
-
-    //ssbo for passing transforms to the shader
-    //glGenBuffers(1, &ssbo);
-    
 }
 
 BufferedBatch::~BufferedBatch()
@@ -64,6 +60,7 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
         size_t vBytes = sizeof(Vertex) * mesh.vertices.size();
         size_t iBytes = sizeof(unsigned int) * mesh.indices.size();
 
+        //For dynamic resizing of buffers
         EnsureVertexCapacity(vBytes);
         EnsureIndexCapacity(iBytes);
 
@@ -94,27 +91,8 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
     //DebugPrintGPUMemoryHandle(handle, meshId, "Load");
 
     return handle;
-    /*
-    Mesh& mesh = m.MeshComponent;
-
-    MemoryBlock& vBlock = vb.AddData(sizeof(Vertex) * mesh.vertices.size(), (const void*)mesh.vertices.data());
-    MemoryBlock& iBlock = ib.AddData(sizeof(unsigned int) * mesh.indices.size(), (const void*)mesh.indices.data());
-    MemoryBlock& ssboBlock = ssboBuffer.AddData(sizeof(glm::mat4), (const void*)&t);
-
-    GPUMemoryHandle cmd = GPUMemoryHandle();
-    cmd.count = mesh.indices.size();
-    cmd.instanceCount = 1;
-    cmd.indexOffset = iBlock.offset / sizeof(unsigned int);
-    cmd.vboOffset = vBlock.offset / sizeof(Vertex);
-    cmd.baseInstance = 0;
-    cmd.ssboIndex = ssboBlock.offset / sizeof(glm::mat4);
-
-    std::cout << "\n--- Loaded Mesh ---\n";
-    return cmd;
-    */
     
 }
-
 
 
 void BufferedBatch::Remove(int index)
@@ -124,7 +102,7 @@ void BufferedBatch::Remove(int index)
         return;
     }
 
-    // Print info about the command being removed
+    // debug print for removed mesh
     GPUMemoryHandle removed = drawCommands[index];
     DebugPrintGPUMemoryHandle(removed, -1, "Remove");
 
@@ -146,12 +124,8 @@ void BufferedBatch::Bind()
 
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
 
-    //bind ssbo for transforms
-
     ssboBuffer.Bind();
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lookupBuffer);      // Lookup Table
-
-    //UpdateCommandBuffer();
 
 }
 

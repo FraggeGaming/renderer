@@ -96,6 +96,9 @@ void Engine::Run()
 {
     //Used to calculate DeltaTime
     auto prevTime = std::chrono::high_resolution_clock::now();
+    // FPS tracking (print every 2 seconds)
+    int fpsFrameCount = 0;
+    float fpsTimer = 0.0f;
     for (size_t i = 0; i < systems.size(); i++)
         {
             systems.at(i)->Start();
@@ -109,6 +112,16 @@ void Engine::Run()
         auto present = std::chrono::high_resolution_clock::now();
         float dt = std::chrono::duration_cast<std::chrono::duration<float>>(present - prevTime).count();
         prevTime = present;
+
+        // FPS counting
+        fpsFrameCount++;
+        fpsTimer += dt;
+        if (fpsTimer >= 2.0f) {
+            float fps = fpsFrameCount / fpsTimer;
+            std::cout << "FPS: " << fps << " (" << fpsFrameCount << " frames in " << fpsTimer << "s)" << std::endl;
+            fpsFrameCount = 0;
+            fpsTimer = 0.0f;
+        }
 
         //Had to clamp this and it works, dont know why the deltatime is acting this weird. prob rounding errors
         if (dt < 0.00001f) {

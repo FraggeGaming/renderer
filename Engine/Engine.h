@@ -67,7 +67,7 @@ public:
     AssetManager assetManager;
     //AppContext* context;
 
-    int height = 600, width = 800; //Add to context later?
+    int height = 900, width = 1200; //Add to context later?
     GLFWwindow* window;
 
     bool findAndDestroyEntities = false;
