@@ -74,6 +74,8 @@ void BatchedRenderer::Start()
 
 void BatchedRenderer::Update(float dt)
 {
+    projection = glm::perspective(glm::radians(90.0f), (float)engine->width/engine->height, 0.1f, 100.0f);
+    engine->camera.CalculateFrustum((float)engine->width / (float)engine->height, 90.0f, 0.1f, 100.0f);
 
     std::unordered_map<int, std::vector<int>> meshGroups;
     std::vector<int> lookupTable;
@@ -82,8 +84,8 @@ void BatchedRenderer::Update(float dt)
 
     ecs->view<BufferedMesh, GPUMemoryHandle, TransformComponent>().each([&](int entityId, BufferedMesh& m, GPUMemoryHandle& h, TransformComponent& t) {
         
-        // 3. Frustum Culling
-        //if (!cam.IsVisible(transform.bounds)) continue;
+        //Frustum Culling
+        if (!engine->camera.isVisible(t)) return;
         
         if (t.isDirty) {
             batch->UpdateTransform(h.ssboIndex, t.GetCombined());
@@ -94,7 +96,9 @@ void BatchedRenderer::Update(float dt)
 
     });
 
+    int count = 0;
     for (auto& [meshID, instances] : meshGroups) {
+        count += instances.size();
         MeshGeometryInfo& geo = batch->geometryRegistry[meshID];
         
         GPUMemoryHandle cmd = {};
@@ -107,6 +111,8 @@ void BatchedRenderer::Update(float dt)
         finalCommands.push_back(cmd);
         lookupTable.insert(lookupTable.end(), instances.begin(), instances.end());
     }
+
+    //std::cout << "BatchedRenderer::Update - instances this frame: " << count << std::endl;
 
     batch->UpdateInstanceLookupBuffer(lookupTable);
     batch->SetDrawVector(finalCommands);

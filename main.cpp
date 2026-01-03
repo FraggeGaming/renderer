@@ -232,11 +232,11 @@ void TestEngine(){
 
     for (size_t i = 0; i < 100; i++)
     {
-        for (size_t j = 0; j < 200; j++)
+        for (size_t j = 0; j < 100; j++)
         {
             Entity e = engine.ecs->CreateEntity();
             BufferedMesh m = BufferedMesh();
-            m.meshID = mid;
+            m.meshID = meid;
 
             engine.ecs->AddComponent(e, m);
 

@@ -5,7 +5,7 @@ public:
     float pitch = 0;
     float yaw = -90;
 
-    bool first;
+    bool first = false;
 
     MouseController(float s) : sensitivity(s) {}
     MouseController() = default;
