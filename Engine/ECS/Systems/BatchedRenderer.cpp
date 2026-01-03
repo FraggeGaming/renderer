@@ -82,15 +82,18 @@ void BatchedRenderer::Update(float dt)
     std::vector<GPUMemoryHandle> finalCommands;
 
 
+    //TODO: fetch from chunkmanager
     ecs->view<BufferedMesh, GPUMemoryHandle, TransformComponent>().each([&](int entityId, BufferedMesh& m, GPUMemoryHandle& h, TransformComponent& t) {
-        
-        //Frustum Culling
-        if (!engine->camera.isVisible(t)) return;
         
         if (t.isDirty) {
             batch->UpdateTransform(h.ssboIndex, t.GetCombined());
             t.isDirty = false;
         }
+        
+        //Frustum Culling
+        if (!engine->camera.isVisible(t)) return;
+        
+        
         meshGroups[m.meshID].push_back(h.ssboIndex);
 
 
