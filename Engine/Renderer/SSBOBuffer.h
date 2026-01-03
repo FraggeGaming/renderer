@@ -18,8 +18,12 @@ public:
 
     void Bind() const;
     MemoryBlock& AddData(size_t size, const void* data);
+    void Free(size_t offset){
+        heap.Free(offset);
+    }
     void UnBind() const;
     void OverWrite(size_t offset, size_t size, const void *data);
+    
     // Resize SSBO to newSize bytes, preserving contents
     void Resize(size_t newSize);
     // Current GPU buffer size in bytes

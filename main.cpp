@@ -236,7 +236,7 @@ void TestEngine(){
         {
             Entity e = engine.ecs->CreateEntity();
             BufferedMesh m = BufferedMesh();
-            m.meshID = meid;
+            m.meshID = mid;
 
             engine.ecs->AddComponent(e, m);
 

@@ -95,20 +95,11 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
 }
 
 
-void BufferedBatch::Remove(int index)
+void BufferedBatch::Unload(GPUMemoryHandle handle)
 {
-    if(index < 0 || index >= (int)drawCommands.size()){
-        std::cout << "BufferedBatch::Remove - invalid index: " << index << std::endl;
-        return;
-    }
-
-    // debug print for removed mesh
-    GPUMemoryHandle removed = drawCommands[index];
-    DebugPrintGPUMemoryHandle(removed, -1, "Remove");
-
-    drawCommands.erase(drawCommands.begin() + index);
-    transforms.erase(transforms.begin() + index);
-
+    vb.Free(handle.vboOffset * sizeof(Vertex));
+    ib.Free(handle.indexOffset * sizeof(unsigned int));
+    ssboBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
 }
 
 void BufferedBatch::AddLayout(const VertexBufferLayout &layout)

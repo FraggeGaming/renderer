@@ -50,6 +50,10 @@ struct AssetManager{
         return meshStorage[meshMap[id]];
     }
 
+    void Remove(int id){
+        meshMap.erase(id);
+    }
+
 };
 
 

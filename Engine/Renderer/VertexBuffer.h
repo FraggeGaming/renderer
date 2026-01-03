@@ -27,6 +27,10 @@ public:
 
     MemoryBlock& AddData(size_t size, const void* data);
     void AddData(size_t offset, size_t size, const void* data);
+
+    void Free(size_t offset){
+        heap.Free(offset);
+    }
     void UnBind() const;
 
 };

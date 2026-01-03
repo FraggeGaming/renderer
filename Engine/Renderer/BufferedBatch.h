@@ -59,8 +59,7 @@ public:
 
     int AddTransform(glm::mat4 t);
     void UpdateTransform(int idx, glm::mat4 t);
-    // Removed: AddMesh(Mesh,int) deprecated in favor of Load(BufferedMesh,...)
-    void Remove(int index);
+    void Unload(GPUMemoryHandle handle);
     void AddLayout(const VertexBufferLayout& layout);
     void Bind();
     void Draw();

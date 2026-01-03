@@ -12,8 +12,9 @@
 
 #include "../../Engine.h"
 
+#include "../../ChunkManager.h"
 
-
+ChunkManager chunkMgr;
 
 
 glm::mat4 projection = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 100.0f);
@@ -21,10 +22,6 @@ glm::mat4 view;
 
 glm::vec3 lightPosition = glm::vec3(0.0f, 0.0f, 3.0f);
 float ambient = 0.2;
-
-bool isDirty = true;
-
-bool isModified = false;
 
 BatchedRenderer::BatchedRenderer(Shader shader, VertexBufferLayout layout)
 {
@@ -45,13 +42,22 @@ void BatchedRenderer::SetCamera(glm::mat4 CameraMatrix)
 
 void BatchedRenderer::LoadMesh(Entity id, BufferedMesh &m, glm::mat4 t)
 {
-  
+    Mesh mesh = engine->assetManager.Get(m.meshID);
+    GPUMemoryHandle handle = batch->Load(m, mesh, t);
+
+    engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
+    m.isLoaded = true;
 }
 
-void BatchedRenderer::Remove(BufferedMesh& e)
+void BatchedRenderer::Unload(Entity id)
 {
-    //batch->Remove(e.batchIdx);
+    BufferedMesh& e = ecs->GetComponent<BufferedMesh>(id);
+    e.isLoaded = false;
 
+    GPUMemoryHandle& handle = ecs->GetComponent<GPUMemoryHandle>(id);
+    batch->Unload(handle);
+    ecs->RemoveComponent<GPUMemoryHandle>(id);
+    
 }
 
 void BatchedRenderer::SetProjection(glm::mat4 mat)
@@ -93,10 +99,7 @@ void BatchedRenderer::Update(float dt)
         //Frustum Culling
         if (!engine->camera.isVisible(t)) return;
         
-        
         meshGroups[m.meshID].push_back(h.ssboIndex);
-
-
     });
 
     int count = 0;

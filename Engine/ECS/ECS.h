@@ -74,10 +74,12 @@ class ECS{
         }
     }
 
-    void RemoveComponent(std::type_index type, int entityId){
-        if(stores.find(type) != stores.end()) {
-            stores[type]->Remove(entityId);
-        }
+    template <typename T>
+    void RemoveComponent(int entityId){
+        auto& store = GetStore<T>();
+        
+        store.Remove(entityId);
+        
     }
 
     template <typename T>

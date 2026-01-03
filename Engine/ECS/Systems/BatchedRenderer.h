@@ -16,7 +16,7 @@ class BatchedRenderer : public System{
 
     void LoadMesh(Entity id, BufferedMesh& m, glm::mat4 t);
 
-    void Remove(BufferedMesh& e);
+    void Unload(Entity id);
 
 
     void SetProjection(glm::mat4 mat);
