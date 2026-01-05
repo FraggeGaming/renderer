@@ -1,3 +1,5 @@
+#pragma once
+
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
@@ -23,7 +25,7 @@ struct Camera {
     MouseController mouse;
 
     glm::vec3 m_cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-    glm::vec3 m_cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 m_cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 m_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
@@ -43,50 +45,9 @@ struct Camera {
         return plane;
     }
 
-    void CalculateFrustum(float aspectRatio, float fov, float nearDist, float farDist){
-        const float halfVSide = farDist * tanf(glm::radians(fov) * 0.5f);
-        const float halfHSide = halfVSide * aspectRatio;
-        const glm::vec3 frontMultFar = m_cameraFront * farDist;
+    void CalculateFrustum(float aspectRatio, float fov, float nearDist, float farDist);
 
-        glm::vec3 right = glm::normalize(glm::cross(m_cameraFront, m_up));
-        glm::vec3 up = glm::normalize(glm::cross(right, m_cameraFront));
-        
-
-        //Far
-        frustum.planes[0] = CreatePlaneFrustum(-m_cameraFront, m_cameraPosition + (frontMultFar) );
-        //Near
-        frustum.planes[1] = CreatePlaneFrustum(m_cameraFront, m_cameraPosition + (nearDist * m_cameraFront));
-
-        //Right 
-        frustum.planes[2] = CreatePlaneFrustum(glm::cross(up, frontMultFar + right * halfHSide), m_cameraPosition);
-
-        //Left
-        frustum.planes[3] = CreatePlaneFrustum(glm::cross(up, frontMultFar - right * halfHSide), m_cameraPosition);
-        //Top
-        frustum.planes[4] = CreatePlaneFrustum(glm::cross(right, frontMultFar - up * halfVSide), m_cameraPosition);
-        //Bottom
-        frustum.planes[5] = CreatePlaneFrustum(glm::cross(right, frontMultFar + up * halfVSide), m_cameraPosition);
-        
-    }
-
-    bool isVisible(const TransformComponent& transform) {
-    
-        //Sphere-Frustum Culling
-        for(size_t i = 0; i < 6; i++) {
-            const Plane& plane = frustum.planes[i];
-            float dist = glm::dot(transform.position, plane.normal) + plane.d;
-
-            if (dist <= 0) {
-                // Un-comment this to see which plane is killing the object
-                // std::cout << "Rejected by plane " << i << " Dist: " << dist << std::endl;
-                return false; 
-            }
-        }
-
-        std::cout << "Entity at " << transform.position.x << ", " << transform.position.y << ", " << transform.position.z << " is visible." << std::endl;
-        
-        return true; //inside all planes
-    }
+    bool isVisible(const TransformComponent& transform);
 
     void MoveFPS(float dy, FPSDirection direction){
         switch (direction){

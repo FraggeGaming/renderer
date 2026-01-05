@@ -230,9 +230,9 @@ void TestEngine(){
     int meid = assetManager.Add(me);
 
 
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 5; i++)
     {
-        for (size_t j = 0; j < 100; j++)
+        for (size_t j = 0; j < 5; j++)
         {
             Entity e = engine.ecs->CreateEntity();
             BufferedMesh m = BufferedMesh();
