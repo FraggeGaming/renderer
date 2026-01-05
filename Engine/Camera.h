@@ -15,12 +15,7 @@ struct Plane{
 };
 
 struct Frustum{
-    Plane top;
-    Plane bottom;
-    Plane left;
-    Plane right;
-    Plane nearPlane;
-    Plane farPlane;
+    Plane planes[6];
 };
 
 struct Camera {
@@ -28,7 +23,7 @@ struct Camera {
     MouseController mouse;
 
     glm::vec3 m_cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-    glm::vec3 m_cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 m_cameraFront = glm::vec3(0.0f, 0.0f, 1.0f);
     glm::vec3 m_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 
@@ -41,62 +36,57 @@ struct Camera {
         return view;
     }
 
+    Plane CreatePlaneFrustum(glm::vec3 normal, glm::vec3 point){
+        Plane plane;
+        plane.normal = glm::normalize(normal);
+        plane.d = -glm::dot(plane.normal, point);
+        return plane;
+    }
+
     void CalculateFrustum(float aspectRatio, float fov, float nearDist, float farDist){
         const float halfVSide = farDist * tanf(glm::radians(fov) * 0.5f);
         const float halfHSide = halfVSide * aspectRatio;
+        const glm::vec3 frontMultFar = m_cameraFront * farDist;
 
-        //Helpers
-        glm::vec3 forward = glm::normalize(m_cameraFront);
-        glm::vec3 right = glm::normalize(glm::cross(forward, m_up));
-        glm::vec3 up = glm::normalize(glm::cross(right, forward));
+        glm::vec3 right = glm::normalize(glm::cross(m_cameraFront, m_up));
+        glm::vec3 up = glm::normalize(glm::cross(right, m_cameraFront));
+        
 
-        glm::vec3 farCenter = m_cameraPosition + forward * farDist;
-        glm::vec3 nearCenter = m_cameraPosition + forward * nearDist;
+        //Far
+        frustum.planes[0] = CreatePlaneFrustum(-m_cameraFront, m_cameraPosition + (frontMultFar) );
+        //Near
+        frustum.planes[1] = CreatePlaneFrustum(m_cameraFront, m_cameraPosition + (nearDist * m_cameraFront));
 
-        frustum.nearPlane = { forward, -glm::dot(forward, nearCenter) };
-        frustum.farPlane  = { -forward, -glm::dot(-forward, farCenter) };
+        //Right 
+        frustum.planes[2] = CreatePlaneFrustum(glm::cross(up, frontMultFar + right * halfHSide), m_cameraPosition);
 
-        // far plane corners
-        glm::vec3 fr = farCenter + right * halfHSide + up * halfVSide; // far-right-top
-        glm::vec3 fl = farCenter - right * halfHSide + up * halfVSide; // far-left-top
-        glm::vec3 br = farCenter + right * halfHSide - up * halfVSide; // far-right-bottom
-        glm::vec3 bl = farCenter - right * halfHSide - up * halfVSide; // far-left-bottom
-
-        auto makePlane = [&](const glm::vec3& a, const glm::vec3& b, const glm::vec3& c){
-            glm::vec3 n = glm::normalize(glm::cross(b - a, c - a));
-
-            // Ensure normal points inward (towards frustum center)
-            if (glm::dot(n, farCenter - a) < 0.0f) n = -n;
-            float d = -glm::dot(n, a);
-            return Plane{ n, d };
-        };
-
-        // camera position and two adjacent far-corners
-        frustum.right  = makePlane(m_cameraPosition, fr, br);
-        frustum.left   = makePlane(m_cameraPosition, bl, fl);
-        frustum.top    = makePlane(m_cameraPosition, fl, fr);
-        frustum.bottom = makePlane(m_cameraPosition, br, bl);
+        //Left
+        frustum.planes[3] = CreatePlaneFrustum(glm::cross(up, frontMultFar - right * halfHSide), m_cameraPosition);
+        //Top
+        frustum.planes[4] = CreatePlaneFrustum(glm::cross(right, frontMultFar - up * halfVSide), m_cameraPosition);
+        //Bottom
+        frustum.planes[5] = CreatePlaneFrustum(glm::cross(right, frontMultFar + up * halfVSide), m_cameraPosition);
+        
     }
 
     bool isVisible(const TransformComponent& transform) {
-    // Calculate bounding box
-    glm::vec3 min = transform.position - (transform.scale * 0.5f);
-    glm::vec3 max = transform.position + (transform.scale * 0.5f);
     
-    // Check each plane
-    for (const Plane* plane : { &frustum.nearPlane, &frustum.farPlane, &frustum.left, &frustum.right, &frustum.top, &frustum.bottom }) {
-        glm::vec3 positiveVertex = min;
-        if (plane->normal.x >= 0) positiveVertex.x = max.x;
-        if (plane->normal.y >= 0) positiveVertex.y = max.y;
-        if (plane->normal.z >= 0) positiveVertex.z = max.z;
+        //Sphere-Frustum Culling
+        for(size_t i = 0; i < 6; i++) {
+            const Plane& plane = frustum.planes[i];
+            float dist = glm::dot(transform.position, plane.normal) + plane.d;
 
-        
-        if (glm::dot(plane->normal, positiveVertex) + plane->d < 0) {
-            return false; //outside plane
+            if (dist <= 0) {
+                // Un-comment this to see which plane is killing the object
+                // std::cout << "Rejected by plane " << i << " Dist: " << dist << std::endl;
+                return false; 
+            }
         }
+
+        std::cout << "Entity at " << transform.position.x << ", " << transform.position.y << ", " << transform.position.z << " is visible." << std::endl;
+        
+        return true; //inside all planes
     }
-    return true; //inside all planes
-}
 
     void MoveFPS(float dy, FPSDirection direction){
         switch (direction){
