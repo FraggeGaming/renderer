@@ -81,7 +81,7 @@ public:
     void AddSystem(std::unique_ptr<System> system);
 
     template<typename T>
-    T& GetSystem(){
+    T* GetSystem(){
         static_assert(std::is_base_of<System, T>::value, "T must derive from System");
 
         for (auto& sys : systems)
@@ -91,7 +91,6 @@ public:
         }
 
         return nullptr;
-        
     }
 
     void CreateWindow();

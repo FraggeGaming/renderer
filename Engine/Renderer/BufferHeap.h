@@ -19,7 +19,7 @@ struct Heap{
         blocks.push_back(MemoryBlock{0, size, true});
     }
 
-    //Simple first fit allocation
+    //Allocate a block of memory of given size
     MemoryBlock& Allocate(size_t size){
         for (size_t i = 0; i < blocks.size(); i++)
         {
@@ -36,10 +36,25 @@ struct Heap{
             }
         }
 
-        //If no suitable block found, create block
+        // Check if we can grow within totalSize limit
+        if (allocatedSize + size > totalSize) {
+            // Out of capacity, size = -1 (SIZE_MAX when cast to size_t)
+            static MemoryBlock outOfMemory{0, static_cast<size_t>(-1), false};
+            return outOfMemory;
+        }
+
+        //Grow the heap
         blocks.push_back({allocatedSize, size, false});
         allocatedSize += size;
-        return blocks.back(); //Allocation failed
+        return blocks.back();
+    }
+
+    void SetTotalSize(size_t newSize) {
+        //Cant get smaller
+        if (newSize < allocatedSize) {
+            return;
+        }
+        totalSize = newSize;
     }
 
     void Free(size_t offset){

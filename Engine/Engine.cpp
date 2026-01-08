@@ -66,6 +66,8 @@ void Engine::CreateWindow()
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
+    glfwSwapInterval(0); //Disable VSync
+
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl;
 }
 
@@ -129,23 +131,10 @@ void Engine::Run()
             std::cout << "WARNING: DT clamped to 0.016666" << std::endl;
         }
         // UPDATE
-        input.Update(dt);
-
-        for (size_t i = 0; i < systems.size(); i++)
-        {
-            systems.at(i)->Update(dt);
-        }
+        Update(dt);
         
         // RENDER
-        glClearColor(0.0, 0.0, 0.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        for (size_t i = 0; i < systems.size(); i++)
-        {
-            systems.at(i)->Render();
-        }
-
-        glfwSwapBuffers(window);
+        Render();
 
         //Deletes all the flaged entities
         //DeleteFlaged();
@@ -159,114 +148,23 @@ void Engine::Run()
 
 void Engine::Update(float dt)
 {
-        //Update stage
-    
+    input.Update(dt);
 
-    //Preprocess stage
-
-    //Later make the components them self trigger this so we dont need to iterate everything
-
-    // bool rebuildMeshes = false; //only for prototyping
-
-    // for(auto& entity : entities){
-    //     if (entity->isDirty)
-    //     {
-    //         //Iterate all components, to see if they are dirty or needs update
-    //         if (entity->hasMesh && entity->dirtyMesh)
-    //         {
-    //             //Remove the mesh then add it again
-    //             std::cout << "Entity has dirty mesh" << std::endl;
-    //             //renderer.Remove(*entity);
-    //             //renderer.AddEntity(*entity);
-    //             rebuildMeshes = true;
-
-    //         }
-
-    //         if (entity->batchTransformIndex != -1 && entity->dirtyTransform)
-    //         {
-    //             //Update the transform
-    //             renderer.UpdateTransform(*entity);
-
-    //         }
-
-
-    //         entity->dirtyMesh = false;
-    //         entity->dirtyTransform = false;
-    //         entity->FlagForUpdate(false);
-    //     }
-    // }
-
-    // if(rebuildMeshes){
-    //     std::cout << "Rebuild the batch!" << std::endl;
-    //     renderer.HandleMeshChanges(entities);
-    // }
+    for (size_t i = 0; i < systems.size(); i++)
+    {
+        systems.at(i)->Update(dt);
+    }
 }
 
 void Engine::Render()
 {
-    // glClearColor(0.0, 0.0, 0.0, 1.0);
-    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // renderer.SetCamera(ctx->camera->GetView());
-    // renderer.Draw();
+    for (size_t i = 0; i < systems.size(); i++)
+    {
+        systems.at(i)->Render();
+    }
 
-    // glfwSwapBuffers(window);
+    glfwSwapBuffers(window);
 }
-
-// void Engine::DeleteFlaged()
-// {
-//     if(!findAndDestroyEntities)
-//         return;
-
-    
-//     findAndDestroyEntities = false;
-
-//     auto it = entities.begin();
-
-//     while(it != entities.end()){
-//         const std::unique_ptr<Entity>& ent_ptr = *it;
-
-//         if(ent_ptr->deleteFlag){
-//             it = entities.erase(it);
-
-//             //Remove from each system that has the entity
-//             //Renderer etc
-
-//             //for now, we just recreate the whole batch each time
-//             std::cout << "entity deleted" << std::endl;
-//         }
-
-//         else {
-//             ++it;
-//         }
-//     }
-
-
-//     //So at the end then we cleared everything, Reinstantiate the batch
-
-//     renderer.HandleMeshChanges(entities);
-// }
-
-// Entity* Engine::CreateEntity(){
-//     std::unique_ptr<Entity> ent = std::make_unique<Entity>();
-//     Entity* ent_ptr = ent.get();
-//     AddEntity(std::move(ent));
-
-//     return ent_ptr;
-// }
-
-// void Engine::AddEntity(std::unique_ptr<Entity> entity)
-// {
-//     entities.push_back(std::move(entity));
-
-//     //renderer.AddEntity(entity);
-// }
-
-// void Engine::DeleteEntity(Entity& entity)
-// {
-//     entity.Kill();
-//     findAndDestroyEntities = true;
-// }
-
-
-

@@ -49,7 +49,7 @@ void BufferedBatch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) 
 
 void BufferedBatch::UpdateTransform(int idx, glm::mat4 t)
 {
-    ssboBuffer.OverWrite(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
+    ssboBuffer.AddData(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
 }
 
 GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)  
