@@ -16,7 +16,7 @@ SSBOBuffer::SSBOBuffer() : Buffer(1024 * 1024) {
 
 void SSBOBuffer::Bind() const {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_RendererID);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_RendererID);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, m_BindingPoint, m_RendererID);
 }
 
 void SSBOBuffer::UnBind() const {

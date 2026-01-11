@@ -112,41 +112,31 @@ void BatchedRenderer::Update(float dt)
     if (UseChunking){
         FetchChunk(CameraTransform, 0, 0, 0);
         std::vector<ChunkPos> loadedChunks = chunkMgr.activeChunks;
+
         for(ChunkPos pos : loadedChunks){
             Chunk& chunk = chunkMgr.chunks[pos];
+            if(!chunk.isVisible) continue;
+
             for(Entity e : chunk.entities){
+
                 if(!ecs->HasComponent<GPUMemoryHandle>(e)) continue;
-                GPUMemoryHandle& h = ecs->GetComponent<GPUMemoryHandle>(e);;
-                TransformComponent& t = ecs->GetComponent<TransformComponent>(e);
+                    GPUMemoryHandle& h = ecs->GetComponent<GPUMemoryHandle>(e);;
+                    TransformComponent& t = ecs->GetComponent<TransformComponent>(e);
+                    BufferedMesh& m = ecs->GetComponent<BufferedMesh>(e);
 
                 if (t.isDirty) {
-                    batch->UpdateTransform(h.ssboIndex, t.GetCombined());
                     chunkMgr.ValidateEntityLocation(t, e, pos);
-                    t.isDirty = false;
                 }
 
-                if (!engine->camera.isVisible(t)) continue;
+                TryRender(meshGroups, t, m, h);
 
-                if(!ecs->HasComponent<BufferedMesh>(e)) continue;
-                BufferedMesh& m = ecs->GetComponent<BufferedMesh>(e);
-                    
-                meshGroups[m.meshID].push_back(h.ssboIndex);
             }
         }
     }
 
     else {
         ecs->view<BufferedMesh, GPUMemoryHandle, TransformComponent>().each([&](int entityId, BufferedMesh& m, GPUMemoryHandle& h, TransformComponent& t) {
-            
-            if (t.isDirty) {
-                batch->UpdateTransform(h.ssboIndex, t.GetCombined());
-                t.isDirty = false;
-            }
-            
-            //Frustum Culling
-            if (!engine->camera.isVisible(t)) return;
-            
-            meshGroups[m.meshID].push_back(h.ssboIndex);
+            TryRender(meshGroups, t, m, h);
         });
     }
     
@@ -179,6 +169,20 @@ void BatchedRenderer::Update(float dt)
     SetCamera(engine->camera.GetView());
 }
 
+void BatchedRenderer::TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, BufferedMesh& m, GPUMemoryHandle& h)
+{
+    if (t.isDirty) {
+        batch->UpdateTransform(h.ssboIndex, t.GetCombined());
+        t.isDirty = false;
+    }
+    
+    //Frustum Culling
+    if (!engine->camera.isVisible(t)) return;
+    
+    meshGroups[m.meshID].push_back(h.ssboIndex);
+}
+
+
 void BatchedRenderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int zOffset){
 
     auto LoadChunk = [&](TransformComponent& t, int xOffset, int yOffset, int zOffset, Chunk& r){
@@ -200,20 +204,61 @@ void BatchedRenderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset
         chunkMgr.Load(t, xOffset, yOffset, zOffset);
     };
 
-
-    Chunk r = chunkMgr.Get(t, 0, 0, 0);
     
-    if(!r.isLoaded){
-        LoadChunk(t, 0, 0, 0, r);
+
+    for (int i = 0; i <= chunkMgr.loadRadius; ++i) {
+        for (int x = -i; x <= i; ++x) {
+            for (int y = -i; y <= i; ++y) {
+                for (int z = -i; z <= i; ++z) {
+                    if (std::max({std::abs(x), std::abs(y), std::abs(z)}) != i) {
+                        continue; // Skip inner chunks
+                    }
+
+                    Chunk r = chunkMgr.Get(t, x, y, z);
+                    if (!r.isLoaded) {
+                        LoadChunk(t, x, y, z, r);
+                    }
+                }
+            }
+        }
+    }
+    
+
+    //For the chunkmanager
+    /*
+        Use a map to track loaded chunks
+        when loading a new chunk, 
+        check if its already loaded
+
+        check if the number of loaded chunks exceeds a limit
+        if it does, unload the least recently used chunk
+    */
+
+
+    for (size_t i = 0; i < chunkMgr.activeChunks.size(); i++)
+    {
+        Chunk& chunk = chunkMgr.chunks[chunkMgr.activeChunks[i]];
+        if(!chunk.isVisible) continue;
+
+        //If difference between chunk pos and camera pos is greater than load radius, unload chunk
+        int diffX = std::abs(chunkMgr.activeChunks[i].x - (int)glm::floor(t.position.x / chunkMgr.chunkSize));
+        int diffY = std::abs(chunkMgr.activeChunks[i].y - (int)glm::floor(t.position.y / chunkMgr.chunkSize));
+        int diffZ = std::abs(chunkMgr.activeChunks[i].z - (int)glm::floor(t.position.z / chunkMgr.chunkSize));  
+        if (std::max({diffX, diffY, diffZ}) > chunkMgr.loadRadius) {
+            std::cout << "Unloading Chunk at (" << chunkMgr.activeChunks[i].x << ", "
+                      << chunkMgr.activeChunks[i].y << ", "
+                      << chunkMgr.activeChunks[i].z << ")" << std::endl;
+            //chunk.UnLoad(*batch, *ecs);
+            chunk.isVisible = false;
+            //chunkMgr.activeChunks.erase(chunkMgr.activeChunks.begin() + i);
+            //i--;
+        }
+
+        //iF memory issue or too many chunks, unload oldest chunk
+        //chunk.unload(*batch, *ecs);
+        //chunk.isVisible = false;
     }
 
-    Chunk r1 = chunkMgr.Get(t, 1, 0, 0);
-    
-    if(!r1.isLoaded){
-        LoadChunk(t, 1, 0, 0, r1);
-    }
-
-    //r.UnLoad(*batch, *ecs);
     
 }
 void BatchedRenderer::Render()

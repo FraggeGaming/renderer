@@ -63,7 +63,7 @@ struct Chunk{
     std::vector<GPUMemoryHandle> gpuHandles;
     std::unordered_map<Entity, size_t> entityToHandleIndex;
     bool isLoaded = false;
-    bool isActive = false;
+    bool isVisible = false;
 
     public:
     void Add(Entity e){
@@ -104,7 +104,7 @@ struct Chunk{
 
 struct ChunkManager{
     std::unordered_map<ChunkPos, Chunk> chunks;
-    float chunkSize = 20.0f;
+    float chunkSize = 16.0f;
     int loadRadius = 2;
 
     FreshQueue<ChunkPos> loadOrderQueue;
@@ -130,6 +130,7 @@ struct ChunkManager{
         loadOrderQueue.push(pos);
         activeChunks.push_back(pos);
         chunk.isLoaded = true;
+        chunk.isVisible = true;
     }
 
     void ValidateEntityLocation(TransformComponent& t, Entity e, ChunkPos oldPos){

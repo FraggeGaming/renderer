@@ -19,14 +19,21 @@ BufferedBatch::BufferedBatch(Shader shader, size_t vertexBufferBytes, size_t ind
     //indirect buffer
     glGenBuffers(1, &indBuffer);
 
+    transformBuffer.SetBinding(0); // Binding 0 for transforms
+    instanceLookupBuffer.SetBinding(1); // Binding 1
+
     //For lookuptable
-    glGenBuffers(1, &lookupBuffer);
+    //glGenBuffers(1, &lookupBuffer);
 }
 
 BufferedBatch::~BufferedBatch()
 {
+    transformBuffer.UnBind();
+    instanceLookupBuffer.UnBind();
+    vb.UnBind();
+    ib.UnBind();
     glDeleteBuffers(1, &indBuffer);
-    glDeleteBuffers(1, &lookupBuffer);
+    //glDeleteBuffers(1, &lookupBuffer);
 }
 
 int BufferedBatch::AddTransform(glm::mat4 t)  
@@ -38,18 +45,23 @@ int BufferedBatch::AddTransform(glm::mat4 t)
 }
 
 void BufferedBatch::UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable) {
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, lookupBuffer);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, lookupTable.size() * sizeof(int), lookupTable.data(), GL_DYNAMIC_DRAW);
+    instanceLookupBuffer.AddData(0, lookupTable.size() * sizeof(int), lookupTable.data());
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, lookupBuffer);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, lookupTable.size() * sizeof(int), lookupTable.data(), GL_DYNAMIC_DRAW);
 }
 
 void BufferedBatch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) {
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
+    glBufferData(GL_DRAW_INDIRECT_BUFFER,
+                 commands.size() * sizeof(GPUMemoryHandle),
+                 commands.data(),
+                 GL_DYNAMIC_DRAW);
     drawCommands = commands;
-    UpdateCommandBuffer();
 }
 
 void BufferedBatch::UpdateTransform(int idx, glm::mat4 t)
 {
-    ssboBuffer.AddData(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
+    transformBuffer.AddData(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
 }
 
 GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)  
@@ -76,7 +88,7 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
 
     // Ensure SSBO has space for a new transform
     EnsureSSBOCapacity(sizeof(glm::mat4));
-    MemoryBlock& ssboBlock = ssboBuffer.AddData(sizeof(glm::mat4), &t);
+    MemoryBlock& ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
 
     GPUMemoryHandle handle = {};
     MeshGeometryInfo& geo = geometryRegistry[meshId];
@@ -99,7 +111,7 @@ void BufferedBatch::Unload(GPUMemoryHandle handle)
 {
     vb.Free(handle.vboOffset * sizeof(Vertex));
     ib.Free(handle.indexOffset * sizeof(unsigned int));
-    ssboBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
+    transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
 }
 
 void BufferedBatch::AddLayout(const VertexBufferLayout &layout)
@@ -115,15 +127,14 @@ void BufferedBatch::Bind()
 
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
 
-    ssboBuffer.Bind();
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lookupBuffer);      // Lookup Table
+    transformBuffer.Bind();
+    instanceLookupBuffer.Bind();
+    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lookupBuffer);      // Lookup Table
 
 }
 
 void BufferedBatch::Draw()
 {
-    //glDrawElements(GL_TRIANGLES, ib.GetCount(), GL_UNSIGNED_INT, nullptr);
-
     glMultiDrawElementsIndirect(
     GL_TRIANGLES, 
     GL_UNSIGNED_INT, 
@@ -137,11 +148,7 @@ void BufferedBatch::Draw()
 
 void BufferedBatch::UpdateCommandBuffer()
 {
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
-    glBufferData(GL_DRAW_INDIRECT_BUFFER,
-                 drawCommands.size() * sizeof(GPUMemoryHandle),
-                 drawCommands.data(),
-                 GL_DYNAMIC_DRAW);
+    
 }
 
 
@@ -209,10 +216,10 @@ void BufferedBatch::EnsureIndexCapacity(size_t neededBytes)
 void BufferedBatch::EnsureSSBOCapacity(size_t neededBytes)
 {
     size_t used = transforms.size() * sizeof(glm::mat4);
-    if (used + neededBytes <= ssboBuffer.GetSize()) return;
+    if (used + neededBytes <= transformBuffer.GetSize()) return;
 
-    size_t newSize = std::max(ssboBuffer.GetSize() * 2, used + neededBytes);
+    size_t newSize = std::max(transformBuffer.GetSize() * 2, used + neededBytes);
     if (newSize == 0) newSize = 1024 * 1024; // fallback
-    std::cout << "BufferedBatch: Growing SSBO buffer " << ssboBuffer.GetSize() << " -> " << newSize << " bytes" << std::endl;
-    ssboBuffer.Resize(newSize);
+    std::cout << "BufferedBatch: Growing SSBO buffer " << transformBuffer.GetSize() << " -> " << newSize << " bytes" << std::endl;
+    transformBuffer.Resize(newSize);
 }
