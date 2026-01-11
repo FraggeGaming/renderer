@@ -1,0 +1,25 @@
+[1mdiff --git a/Game.cpp b/Game.cpp[m
+[1mindex 8e6b585..ec743b0 100644[m
+[1m--- a/Game.cpp[m
+[1m+++ b/Game.cpp[m
+[36m@@ -8,7 +8,7 @@[m [mvoid Game::CreateController(Entity e_ptr){[m
+     float speed = 0.5f;[m
+ [m
+     [m
+[31m-    float cameraSpeed = 2.0f;[m
+[32m+[m[32m    float cameraSpeed = 5.0f;[m
+ [m
+     Camera* cam_ptr = &engine->camera;[m
+     Engine* engine = this->engine;[m
+[36m@@ -164,9 +164,9 @@[m [mvoid Game::Start()[m
+     std::cout << "Added Mesh with ID: " << mid << std::endl;[m
+ [m
+ [m
+[31m-    for (size_t i = 0; i < 50; i++)[m
+[32m+[m[32m    for (size_t i = 0; i < 100; i++)[m
+     {[m
+[31m-        for (size_t j = 0; j < 50; j++)[m
+[32m+[m[32m        for (size_t j = 0; j < 100; j++)[m
+         {[m
+             Entity e = engine->ecs->CreateEntity();[m
+             BufferedMesh m = BufferedMesh();[m

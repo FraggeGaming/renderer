@@ -8,7 +8,7 @@ void Game::CreateController(Entity e_ptr){
     float speed = 0.5f;
 
     
-    float cameraSpeed = 2.0f;
+    float cameraSpeed = 5.0f;
 
     Camera* cam_ptr = &engine->camera;
     Engine* engine = this->engine;
@@ -164,9 +164,9 @@ void Game::Start()
     std::cout << "Added Mesh with ID: " << mid << std::endl;
 
 
-    for (size_t i = 0; i < 50; i++)
+    for (size_t i = 0; i < 100; i++)
     {
-        for (size_t j = 0; j < 50; j++)
+        for (size_t j = 0; j < 100; j++)
         {
             Entity e = engine->ecs->CreateEntity();
             BufferedMesh m = BufferedMesh();
