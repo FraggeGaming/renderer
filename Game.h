@@ -1,7 +1,7 @@
 #pragma once
 #include "Engine/ECS/Systems/System.h"
-#include "Engine/Renderer/BufferedBatch.h"
-#include "Engine/Components/BufferedMesh.h"
+#include "Engine/Renderer/Batch.h"
+#include "Engine/Components/MeshCapsule.h"
 #include "Engine/Components/TransformComponent.h"
 
 #include "Engine/Components/GPUMemoryHandle.h"

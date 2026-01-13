@@ -1,11 +1,16 @@
 #pragma once
 #include "../ECS.h"
+#include <string>
+
+
+
 using Entity = int;
 
 class Engine;
 
 class System{
     public:
+    std::string name;
     Engine* engine = nullptr;
     ECS* ecs = nullptr;
     

@@ -1,6 +1,6 @@
 #include "Game.h"
 #include "ObjReader.h"
-#include "Engine/ECS/Systems/BatchedRenderer.h"
+#include "Engine/ECS/Systems/Renderer.h"
 #include "Engine/Engine.h"
 
 void Game::CreateController(Entity e_ptr){
@@ -15,7 +15,7 @@ void Game::CreateController(Entity e_ptr){
     AppContext* ctx = engine->ctx.get();
 
     engine->ctx->input->BindKey(GLFW_KEY_P,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-        if (auto* batchedRenderer = engine->GetSystem<BatchedRenderer>()) {
+        if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
             batchedRenderer->DebugTrace();
         }
      });
@@ -27,9 +27,9 @@ void Game::CreateController(Entity e_ptr){
      });
 
      engine->ctx->input->BindKey(GLFW_KEY_C,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-        if (auto* batchedRenderer = engine->GetSystem<BatchedRenderer>()) {
+        if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
             batchedRenderer->UseChunking = !batchedRenderer->UseChunking;
-            std::cout << "BatchedRenderer: UseChunking set to " << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
+            std::cout << "Renderer: UseChunking set to " << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
         }
      });
 
@@ -150,7 +150,7 @@ void Game::Start()
 
     {
         Entity e = engine->ecs->CreateEntity();
-        BufferedMesh m = BufferedMesh();
+        MeshCapsule m = MeshCapsule();
         m.meshID = mid;
 
         engine->ecs->AddComponent(e, m);
@@ -170,12 +170,12 @@ void Game::Start()
     std::cout << "Added Mesh with ID: " << mid << std::endl;
 
 
-    for (size_t i = 0; i < 30; i++)
+    for (size_t i = 0; i < 300; i++)
     {
-        for (size_t j = 0; j < 30; j++)
+        for (size_t j = 0; j < 300; j++)
         {
             Entity e = engine->ecs->CreateEntity();
-            BufferedMesh m = BufferedMesh();
+            MeshCapsule m = MeshCapsule();
 
             if(j % 2 == 0){
                 m.meshID = meid;

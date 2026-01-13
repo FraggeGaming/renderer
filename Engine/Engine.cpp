@@ -24,12 +24,14 @@ Engine::Engine(){
     systems.reserve(10);
 }
 
-void Engine::AddSystem(std::unique_ptr<System> system)
+System* Engine::AddSystem(std::unique_ptr<System> system)
 {
     system->id = 0;
     system->Init(*ecs, *this);
 
+    System* ptr = system.get();
     systems.push_back(std::move(system));
+    return ptr;
 }
 
 void Engine::CreateWindow()
@@ -98,7 +100,7 @@ void Engine::Run()
 {
     //Used to calculate DeltaTime
     auto prevTime = std::chrono::high_resolution_clock::now();
-    // FPS tracking (print every 2 seconds)
+    // FPS tracking
     int fpsFrameCount = 0;
     float fpsTimer = 0.0f;
     for (size_t i = 0; i < systems.size(); i++)
@@ -148,21 +150,25 @@ void Engine::Run()
 
 void Engine::Update(float dt)
 {
+    Timer timer("Update", true);
     input.Update(dt);
 
     for (size_t i = 0; i < systems.size(); i++)
-    {
+    {   
+        Timer timer("System Update: " + (systems.at(i)->name.empty() ? "<unnamed>" : systems.at(i)->name), true);
         systems.at(i)->Update(dt);
     }
 }
 
 void Engine::Render()
 {
+    Timer timer("Render", true);
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (size_t i = 0; i < systems.size(); i++)
     {
+        Timer timer("System Render: " + (systems.at(i)->name.empty() ? "<unnamed>" : systems.at(i)->name), true);
         systems.at(i)->Render();
     }
 

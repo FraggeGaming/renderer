@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g
+CXXFLAGS = -std=c++17 -Wall -g -O3
 LIBS = -lglfw3 -lglew32 -lopengl32
 TARGET = main.exe
 
@@ -16,11 +16,8 @@ $(TARGET): $(OBJ)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) $(TARGET) gmon.out analysis.txt
+	rm -f $(OBJ) $(TARGET)
 
-profile: $(TARGET)
-	./$(TARGET)
-	gprof $(TARGET) gmon.out > analysis.txt
-	@echo "Profile analysis written to analysis.txt"
+.PHONY: all clean remake
 
-.PHONY: all clean profile
+remake: clean all

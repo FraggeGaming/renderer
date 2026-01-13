@@ -79,7 +79,7 @@ struct Chunk{
     }
 
 
-    void UnLoad(BufferedBatch& batch, ECS& ecs){
+    void UnLoad(Batch& batch, ECS& ecs){
         if(!isLoaded) return;
         for(Entity e : entities){
             EntityDrawInfo drawinfo = gpuHandles[entityToHandleIndex[e]];

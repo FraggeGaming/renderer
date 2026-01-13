@@ -14,9 +14,9 @@
 #include "VertexArray.h"
 #include "RenderTypes.h"
 #include "../Shader/Shader.h"
-#include "../Components/BufferedMesh.h"
 #include <memory>
 #include "../Components/GPUMemoryHandle.h"
+#include "../Components/MeshCapsule.h"
 
 
 using Entity = int;
@@ -26,7 +26,7 @@ struct MeshGeometryInfo {
     int vboOffset;
 };
 
-class BufferedBatch{
+class Batch{
 public:
     size_t vertexOffset = 0;
     size_t indexOffset = 0;
@@ -51,8 +51,8 @@ public:
 
     std::unordered_map<int, MeshGeometryInfo> geometryRegistry;
 
-    BufferedBatch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull);
-    ~BufferedBatch();
+    Batch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull);
+    ~Batch();
 
     void UpdateTransform(int idx, glm::mat4 t);
     void Unload(GPUMemoryHandle handle);
@@ -63,7 +63,7 @@ public:
     void UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable);
     void SetDrawVector(const std::vector<GPUMemoryHandle>& commands);
 
-    GPUMemoryHandle Load(BufferedMesh& m, Mesh mesh, glm::mat4 t);
+    GPUMemoryHandle Load(MeshCapsule& m, Mesh mesh, glm::mat4 t);
 
     // Debug helper: prints details about a GPU memory handle and associated mesh
     void DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action);

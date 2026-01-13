@@ -1,15 +1,14 @@
-#include "BufferedBatch.h"
+#include "Batch.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "../Components/MeshComponent.h"
 #include "../Components/TransformComponent.h"
 
 #include <iostream>
 #include <algorithm>
 
 
-BufferedBatch::BufferedBatch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes)
+Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes)
 : vertexBufferSize(vertexBufferBytes), indexBufferSize(indexBufferBytes), vb(nullptr, (unsigned int)vertexBufferSize), ib(nullptr, (unsigned int)indexBufferSize), shader(shader)
 {
     glDisable(GL_CULL_FACE);
@@ -23,7 +22,7 @@ BufferedBatch::BufferedBatch(Shader shader, size_t vertexBufferBytes, size_t ind
     instanceLookupBuffer.SetBinding(1); // Binding 1
 }
 
-BufferedBatch::~BufferedBatch()
+Batch::~Batch()
 {
     transformBuffer.UnBind();
     instanceLookupBuffer.UnBind();
@@ -32,11 +31,11 @@ BufferedBatch::~BufferedBatch()
     glDeleteBuffers(1, &indBuffer);
 }
 
-void BufferedBatch::UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable) {
+void Batch::UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable) {
     instanceLookupBuffer.AddData(0, lookupTable.size() * sizeof(int), lookupTable.data());
 }
 
-void BufferedBatch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) {
+void Batch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) {
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
     glBufferData(GL_DRAW_INDIRECT_BUFFER,
                  commands.size() * sizeof(GPUMemoryHandle),
@@ -45,12 +44,12 @@ void BufferedBatch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) 
     drawCommands = commands;
 }
 
-void BufferedBatch::UpdateTransform(int idx, glm::mat4 t)
+void Batch::UpdateTransform(int idx, glm::mat4 t)
 {
     transformBuffer.AddData(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
 }
 
-GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)  
+GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)  
 {   
     int meshId = m.meshID; 
 
@@ -59,8 +58,8 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
         size_t iBytes = sizeof(unsigned int) * mesh.indices.size();
 
         //For dynamic resizing of buffers
-        EnsureVertexCapacity(vBytes);
-        EnsureIndexCapacity(iBytes);
+        //EnsureVertexCapacity(vBytes);
+        //EnsureIndexCapacity(iBytes);
 
         MemoryBlock& vBlock = vb.AddData(vBytes, (const void*)mesh.vertices.data());
         MemoryBlock& iBlock = ib.AddData(iBytes, (const void*)mesh.indices.data());
@@ -73,7 +72,7 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
     }
 
     // Ensure SSBO has space for a new transform
-    EnsureSSBOCapacity(sizeof(glm::mat4));
+    //EnsureSSBOCapacity(sizeof(glm::mat4));
     MemoryBlock& ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
 
     GPUMemoryHandle handle = {};
@@ -93,19 +92,19 @@ GPUMemoryHandle BufferedBatch::Load(BufferedMesh& m, Mesh mesh, glm::mat4 t)
 }
 
 
-void BufferedBatch::Unload(GPUMemoryHandle handle)
+void Batch::Unload(GPUMemoryHandle handle)
 {
     vb.Free(handle.vboOffset * sizeof(Vertex));
     ib.Free(handle.indexOffset * sizeof(unsigned int));
     transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
 }
 
-void BufferedBatch::AddLayout(const VertexBufferLayout &layout)
+void Batch::AddLayout(const VertexBufferLayout &layout)
 {
     va.AddBuffer(vb, layout);
 }
 
-void BufferedBatch::Bind()
+void Batch::Bind()
 {
     va.Bind();
     vb.Bind();
@@ -118,7 +117,7 @@ void BufferedBatch::Bind()
 
 }
 
-void BufferedBatch::Draw()
+void Batch::Draw()
 {
     glMultiDrawElementsIndirect(
     GL_TRIANGLES, 
@@ -129,7 +128,7 @@ void BufferedBatch::Draw()
 
 }
 
-void BufferedBatch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action)
+void Batch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action)
 {
     std::cout << "[BufferedBatch::" << action << "] ";
     if(meshID >= 0) std::cout << "MeshID: " << meshID << " ";
@@ -156,7 +155,7 @@ void BufferedBatch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int
               << " indexOffset(bytes): " << indexOffset
               << std::endl;
 
-    // If we have geometry info for the mesh, print it
+    // Print mesh geometry info
     if (meshID >= 0) {
         auto it = geometryRegistry.find(meshID);
         if (it != geometryRegistry.end()){
@@ -170,7 +169,7 @@ void BufferedBatch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int
 }
 
 
-void BufferedBatch::EnsureVertexCapacity(size_t neededBytes)
+void Batch::EnsureVertexCapacity(size_t neededBytes)
 {
     if (vertexOffset + neededBytes <= vertexBufferSize) return;
 
@@ -180,7 +179,7 @@ void BufferedBatch::EnsureVertexCapacity(size_t neededBytes)
     vertexBufferSize = newSize;
 }
 
-void BufferedBatch::EnsureIndexCapacity(size_t neededBytes)
+void Batch::EnsureIndexCapacity(size_t neededBytes)
 {
     if (indexOffset + neededBytes <= indexBufferSize) return;
 
@@ -190,12 +189,11 @@ void BufferedBatch::EnsureIndexCapacity(size_t neededBytes)
     indexBufferSize = newSize;
 }
 
-void BufferedBatch::EnsureSSBOCapacity(size_t neededBytes)
+void Batch::EnsureSSBOCapacity(size_t neededBytes)
 {
-    size_t used = transforms.size() * sizeof(glm::mat4);
-    if (used + neededBytes <= transformBuffer.GetSize()) return;
+    if (neededBytes <= transformBuffer.GetSize()) return;
 
-    size_t newSize = std::max(transformBuffer.GetSize() * 2, used + neededBytes);
+    size_t newSize = std::max(transformBuffer.GetSize() * 2,  neededBytes);
     if (newSize == 0) newSize = 1024 * 1024; // fallback
     std::cout << "BufferedBatch: Growing SSBO buffer " << transformBuffer.GetSize() << " -> " << newSize << " bytes" << std::endl;
     transformBuffer.Resize(newSize);

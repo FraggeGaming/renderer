@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <vector>
 
+#include <iostream>
+
 struct MemoryBlock {
 
     size_t offset;
@@ -27,6 +29,7 @@ struct Heap{
                 size_t remainingSize = blocks[i].size - size;
                 blocks[i].free = false;
                 blocks[i].size = size;
+                allocatedSize += size;
 
                 if (remainingSize > 0){
                     blocks.insert(blocks.begin() + i + 1, MemoryBlock{blocks[i].offset + size, remainingSize, true});
@@ -38,8 +41,10 @@ struct Heap{
 
         // Check if we can grow within totalSize limit
         if (allocatedSize + size > totalSize) {
-            // Out of capacity, size = -1 (SIZE_MAX when cast to size_t)
-            static MemoryBlock outOfMemory{0, static_cast<size_t>(-1), false};
+
+            // Out of capacity
+            static MemoryBlock outOfMemory{0, 0, false};
+            //std::cout << "OUT OF HEAP MEMORY" << std::endl;
             return outOfMemory;
         }
 
@@ -61,6 +66,7 @@ struct Heap{
         for (size_t i = 0; i < blocks.size(); i++)
         {
             if (blocks[i].offset == offset){
+                allocatedSize -= blocks[i].size;
                 blocks[i].free = true;
                 //Coalesce adjacent free blocks
                 if (i > 0 && blocks[i - 1].free){

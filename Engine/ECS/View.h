@@ -4,6 +4,8 @@
 #include <algorithm>
 #include "ComponentStore.h"
 
+#include <iostream>
+
 // Forward declarations 
 class ECS;
 using Entity = int;
@@ -68,10 +70,21 @@ public:
 
         const std::vector<int>& entities = smallestBase->GetEntityIndices();
 
-        for (int i = 0; i < (int)entities.size(); ++i) {
+        int count = 0;
+        int nextPercentagePrint = 1;
+        int percentageStep = 1;
+        int currentPercentage = 0;
+
+        for (int i = 0; i < (int)entities.size(); i++) {
             int entityId = entities[i];
 
+        
             if (HasAllInternal(entityId)) {
+                currentPercentage = (std::max(i, 1) * 100) / (int)entities.size();
+                if(currentPercentage >= nextPercentagePrint) {
+                    //std::cout << "\rView Iteration Progress: " << currentPercentage << "%" << std::endl;
+                    nextPercentagePrint = std::min(100, nextPercentagePrint + percentageStep);
+                }
                 // Pass direct references to the lambda
                 func(entityId, std::get<ComponentStore<Ts>*>(cachedStores)->Get(entityId)...);
             }

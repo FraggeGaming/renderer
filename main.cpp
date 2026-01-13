@@ -2,33 +2,14 @@
 #include <string>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <memory>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
-#include <chrono>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "Engine/Math/Math.h"
-//#include "Engine/Renderer/Batch.h"
 #include "Engine/Renderer/VertexBufferLayout.h"
 #include "Engine/Shader/Shader.h"
-#include "ObjReader.h"
-#include "Engine/AppContext.h"
-//#include "Engine/Renderer/Renderer.h"
 #pragma once
 
 #include "Engine/Engine.h"
-#include "Engine/ECS/Systems/BatchedRenderer.h"
-#include "Engine/Components/BufferedMesh.h"
-#include "Engine/Components/TransformComponent.h"
 
+#include "Engine/ECS/Systems/Renderer.h"
 #include "Game.h"
 
 struct Player{
@@ -64,8 +45,9 @@ void TestEngine(){
     layout.Push<float>(3);  //normal
     layout.Push<float>(4);  //color
 
-    engine.AddSystem(std::make_unique<Game>());   
-    engine.AddSystem(std::make_unique<BatchedRenderer>(shader, layout));
+    engine.AddSystem(std::make_unique<Game>())->name =  "GameSystem";
+
+    engine.AddSystem(std::make_unique<Renderer>(shader, layout))->name = "Renderer";
     engine.Run();
 
 }

@@ -1,9 +1,8 @@
 #include "../Renderer/RenderTypes.h"
 #pragma once
 
-struct MeshComponent{
-    Mesh MeshComponent;
+struct MeshCapsule{
+    bool isLoaded = false;
     bool isDirty = false;
-
-    
+    int meshID;
 };

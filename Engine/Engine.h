@@ -4,6 +4,8 @@
 #include <GLFW/glfw3.h>
 #include <memory>
 #include <chrono>
+#include <iomanip> //For debug timer
+#
 
 #include "Renderer/VertexBufferLayout.h"
 #include "Shader/Shader.h"
@@ -12,6 +14,89 @@
 #include "InputHandler.h"
 #include "AppContext.h"
 #include "ECS/Systems/System.h"
+
+// Profiling system
+class ProfileData {
+public:
+    struct Entry {
+        std::string name;
+        long long totalMicroseconds = 0;
+        int callCount = 0;
+        long long largestMicroseconds = 0;
+        
+        double getAverageMicros() const { return callCount > 0 ? (double)totalMicroseconds / callCount : 0.0; }
+        double getAverageMillis() const { return getAverageMicros() / 1000.0; }
+    };
+    
+private:
+    static inline std::unordered_map<std::string, Entry> entries;
+    
+public:
+    static void Record(const std::string& name, long long microseconds) {
+        entries[name].name = name;
+        entries[name].totalMicroseconds += microseconds;
+        entries[name].callCount++;
+        if (microseconds > entries[name].largestMicroseconds) {
+            entries[name].largestMicroseconds = microseconds;
+        }
+    }
+    
+    static void PrintStats() {
+        std::cout << "\n=== PROFILING STATISTICS ===" << std::endl;
+        std::cout << std::left << std::setw(35) << "Function" 
+                  << std::right << std::setw(12) << "Calls" 
+                  << std::setw(15) << "Total (ms)" 
+                  << std::setw(15) << "Avg (µs)" 
+                  << std::setw(15) << "Avg (ms)"
+                  << std::setw(15) << "Largest (ms)" << std::endl;
+        std::cout << std::string(92, '-') << std::endl;
+        
+        // Sort by total time
+        std::vector<Entry> sorted;
+        for (const auto& [name, entry] : entries) {
+            sorted.push_back(entry);
+        }
+        std::sort(sorted.begin(), sorted.end(), [](const Entry& a, const Entry& b) {
+            return a.totalMicroseconds > b.totalMicroseconds;
+        });
+        
+        for (const auto& entry : sorted) {
+            std::cout << std::left << std::setw(35) << entry.name
+                      << std::right << std::setw(12) << entry.callCount
+                      << std::setw(15) << std::fixed << std::setprecision(3) << (entry.totalMicroseconds / 1000.0)
+                      << std::setw(15) << std::fixed << std::setprecision(2) << entry.getAverageMicros()
+                      << std::setw(15) << std::fixed << std::setprecision(3) << entry.getAverageMillis()
+                      << std::setw(15) << std::fixed << std::setprecision(3) << (entry.largestMicroseconds / 1000.0)
+                      << std::endl;
+        }
+        std::cout << "========================\n" << std::endl;
+    }
+    
+    static void Reset() {
+        entries.clear();
+    }
+};
+
+class Timer {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start;
+    std::string name;
+    bool silent;
+public:
+    Timer(const std::string& name, bool silent = false) 
+        : name(name), silent(silent), start(std::chrono::high_resolution_clock::now()) {}
+    
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        ProfileData::Record(name, duration);
+        
+        if(!silent && duration > 50) {
+            std::cout << name << ": " << duration << " µs (" << duration/1000.0 << " ms)" << std::endl;
+        }
+    }
+};
+
+
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -78,7 +163,7 @@ public:
 
     Engine();
 
-    void AddSystem(std::unique_ptr<System> system);
+    System* AddSystem(std::unique_ptr<System> system);
 
     template<typename T>
     T* GetSystem(){

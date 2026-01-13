@@ -4,14 +4,12 @@ VertexBuffer::VertexBuffer(const void* data, unsigned int size) : Buffer(size) {
     glGenBuffers(1, &m_RendererID);
     Bind();
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-    m_Size = size;
 }
 
 VertexBuffer::VertexBuffer() : Buffer(1024 * 1024) {
     glGenBuffers(1, &m_RendererID);
     Bind();
     glBufferData(GL_ARRAY_BUFFER, 1024 * 1024, nullptr, GL_DYNAMIC_DRAW);
-    m_Size = 1024 * 1024;
 }
 
 void VertexBuffer::Bind() const {
