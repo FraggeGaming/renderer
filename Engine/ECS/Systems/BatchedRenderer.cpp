@@ -6,11 +6,88 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <iomanip>
+
 
 
 #include "../../Engine.h"
 
 #include "../../ChunkManager.h"
+
+// Profiling system
+class ProfileData {
+public:
+    struct Entry {
+        std::string name;
+        long long totalMicroseconds = 0;
+        int callCount = 0;
+        
+        double getAverageMicros() const { return callCount > 0 ? (double)totalMicroseconds / callCount : 0.0; }
+        double getAverageMillis() const { return getAverageMicros() / 1000.0; }
+    };
+    
+private:
+    static inline std::unordered_map<std::string, Entry> entries;
+    
+public:
+    static void Record(const std::string& name, long long microseconds) {
+        entries[name].name = name;
+        entries[name].totalMicroseconds += microseconds;
+        entries[name].callCount++;
+    }
+    
+    static void PrintStats() {
+        std::cout << "\n=== PROFILING STATISTICS ===" << std::endl;
+        std::cout << std::left << std::setw(35) << "Function" 
+                  << std::right << std::setw(12) << "Calls" 
+                  << std::setw(15) << "Total (ms)" 
+                  << std::setw(15) << "Avg (µs)" 
+                  << std::setw(15) << "Avg (ms)" << std::endl;
+        std::cout << std::string(92, '-') << std::endl;
+        
+        // Sort by total time
+        std::vector<Entry> sorted;
+        for (const auto& [name, entry] : entries) {
+            sorted.push_back(entry);
+        }
+        std::sort(sorted.begin(), sorted.end(), [](const Entry& a, const Entry& b) {
+            return a.totalMicroseconds > b.totalMicroseconds;
+        });
+        
+        for (const auto& entry : sorted) {
+            std::cout << std::left << std::setw(35) << entry.name
+                      << std::right << std::setw(12) << entry.callCount
+                      << std::setw(15) << std::fixed << std::setprecision(3) << (entry.totalMicroseconds / 1000.0)
+                      << std::setw(15) << std::fixed << std::setprecision(2) << entry.getAverageMicros()
+                      << std::setw(15) << std::fixed << std::setprecision(3) << entry.getAverageMillis()
+                      << std::endl;
+        }
+        std::cout << "========================\n" << std::endl;
+    }
+    
+    static void Reset() {
+        entries.clear();
+    }
+};
+
+class Timer {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start;
+    std::string name;
+    bool silent;
+public:
+    Timer(const std::string& name, bool silent = false) 
+        : name(name), silent(silent), start(std::chrono::high_resolution_clock::now()) {}
+    
+    ~Timer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        ProfileData::Record(name, duration);
+        
+        if(!silent && duration > 50) {
+            std::cout << name << ": " << duration << " µs (" << duration/1000.0 << " ms)" << std::endl;
+        }
+    }
+};
 
 ChunkManager chunkMgr;
 
@@ -49,10 +126,11 @@ void BatchedRenderer::Add(Entity id, BufferedMesh &m, glm::mat4 t)
 //Change to private
 bool BatchedRenderer::LoadMesh(Entity id, BufferedMesh &m, glm::mat4 t)
 {
+    Timer timer("LoadMesh", true);
     Mesh mesh = engine->assetManager.Get(m.meshID);
     GPUMemoryHandle handle = batch->Load(m, mesh, t);
 
-    if (handle.ssboIndex == -1) return false; // or check appropriate error condition
+    if (handle.ssboIndex == -1) return false;
     
     engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
     m.isLoaded = true;
@@ -86,6 +164,7 @@ void BatchedRenderer::SetProjection(glm::mat4 mat)
 
 void BatchedRenderer::Start()
 {
+    Timer timer("BatchedRenderer::Start", true);
     ecs->view<BufferedMesh, TransformComponent>().each([&](int entityId, BufferedMesh& m, TransformComponent& t) {
         if(m.isLoaded == false){
             Add(entityId, m, t.GetCombined());
@@ -95,82 +174,81 @@ void BatchedRenderer::Start()
 
 void BatchedRenderer::Update(float dt)
 {
+    Timer timer("BatchedRenderer::Update TOTAL", true);
+    
     projection = glm::perspective(glm::radians(90.0f), (float)engine->width/engine->height, 0.1f, 100.0f);
     engine->camera.CalculateFrustum((float)engine->width / (float)engine->height, 90.0f, 0.1f, 100.0f);
 
-    //New chunk testing
     TransformComponent CameraTransform;
     CameraTransform.position = engine->camera.m_cameraPosition;
 
-    
-    //Regular frustum culling and batching
     std::unordered_map<int, std::vector<int>> meshGroups;
     std::vector<int> lookupTable;
     std::vector<GPUMemoryHandle> finalCommands;
 
-
     if (UseChunking){
-        FetchChunk(CameraTransform, 0, 0, 0);
-        std::vector<ChunkPos> loadedChunks = chunkMgr.activeChunks;
+        {
+            Timer t("FetchChunk", true);
+            FetchChunk(CameraTransform, 0, 0, 0);
+        }
+        
+        {
+            Timer t("Iterate Chunks", true);
+            std::vector<ChunkPos> loadedChunks = chunkMgr.activeChunks;
 
-        for(ChunkPos pos : loadedChunks){
-            Chunk& chunk = chunkMgr.chunks[pos];
-            if(!chunk.isVisible) continue;
+            for(ChunkPos pos : loadedChunks){
+                Chunk& chunk = chunkMgr.chunks[pos];
+                if(!chunk.isVisible) continue;
 
-            for(Entity e : chunk.entities){
+                for(EntityDrawInfo e : chunk.gpuHandles){
+                    TransformComponent& t = ecs->GetComponent<TransformComponent>(e.entity);
 
-                if(!ecs->HasComponent<GPUMemoryHandle>(e)) continue;
-                    GPUMemoryHandle& h = ecs->GetComponent<GPUMemoryHandle>(e);;
-                    TransformComponent& t = ecs->GetComponent<TransformComponent>(e);
-                    BufferedMesh& m = ecs->GetComponent<BufferedMesh>(e);
-
-                if (t.isDirty) {
-                    chunkMgr.ValidateEntityLocation(t, e, pos);
+                    if (t.isDirty) {
+                        chunkMgr.ValidateEntityLocation(t, e.MeshID, e.entity, pos);
+                    }
+                    TryRender(meshGroups, t, e.MeshID, e.handle);
                 }
-
-                TryRender(meshGroups, t, m, h);
-
             }
         }
     }
-
     else {
+        Timer t("ECS View Iteration", true);
         ecs->view<BufferedMesh, GPUMemoryHandle, TransformComponent>().each([&](int entityId, BufferedMesh& m, GPUMemoryHandle& h, TransformComponent& t) {
-            TryRender(meshGroups, t, m, h);
+            TryRender(meshGroups, t, m.meshID, h);
         });
     }
     
+    {
+        Timer t("Create Draw Commands", true);
+        int count = 0;
+        for (auto& [meshID, instances] : meshGroups) {
+            count += instances.size();
+            MeshGeometryInfo& geo = batch->geometryRegistry[meshID];
+            
+            GPUMemoryHandle cmd = {};
+            cmd.count = geo.indexCount;
+            cmd.instanceCount = instances.size();
+            cmd.indexOffset = geo.indexOffset;
+            cmd.vboOffset = geo.vboOffset;
+            cmd.baseInstance = lookupTable.size();
 
- 
-    //Create draw commands
-    int count = 0;
-    for (auto& [meshID, instances] : meshGroups) {
-        count += instances.size();
-        MeshGeometryInfo& geo = batch->geometryRegistry[meshID];
-        
-        GPUMemoryHandle cmd = {};
-        cmd.count = geo.indexCount;
-        cmd.instanceCount = instances.size();
-        cmd.indexOffset = geo.indexOffset;
-        cmd.vboOffset = geo.vboOffset;
-        cmd.baseInstance = lookupTable.size(); // Offset in the lookup SSBO
-
-        finalCommands.push_back(cmd);
-        lookupTable.insert(lookupTable.end(), instances.begin(), instances.end());
+            finalCommands.push_back(cmd);
+            lookupTable.insert(lookupTable.end(), instances.begin(), instances.end());
+        }
     }
 
-    //std::cout << "BatchedRenderer::Update - instances this frame: " << count << std::endl;
-
-    batch->UpdateInstanceLookupBuffer(lookupTable);
-    batch->SetDrawVector(finalCommands);
-    
-
+    {
+        Timer t("Update Buffers", true);
+        batch->UpdateInstanceLookupBuffer(lookupTable);
+        batch->SetDrawVector(finalCommands);
+    }
 
     SetCamera(engine->camera.GetView());
 }
 
-void BatchedRenderer::TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, BufferedMesh& m, GPUMemoryHandle& h)
+void BatchedRenderer::TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, int meshID, GPUMemoryHandle& h)
 {
+
     if (t.isDirty) {
         batch->UpdateTransform(h.ssboIndex, t.GetCombined());
         t.isDirty = false;
@@ -179,107 +257,82 @@ void BatchedRenderer::TryRender(std::unordered_map<int, std::vector<int>>& meshG
     //Frustum Culling
     if (!engine->camera.isVisible(t)) return;
     
-    meshGroups[m.meshID].push_back(h.ssboIndex);
+    meshGroups[meshID].push_back(h.ssboIndex);
 }
 
 
 void BatchedRenderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int zOffset){
-
+    Timer timer("FetchChunk TOTAL", true);
+    
     auto LoadChunk = [&](TransformComponent& t, int xOffset, int yOffset, int zOffset, Chunk& r){
-        std::cout << "Loading Chunk at (" << (int)glm::floor(t.position.x / chunkMgr.chunkSize) + xOffset << ", "
-                  << (int)glm::floor(t.position.y / chunkMgr.chunkSize) + yOffset << ", "
-                  << (int)glm::floor(t.position.z / chunkMgr.chunkSize) + zOffset << ")" << std::endl;
+        Timer loadTimer("LoadChunk", true);
         
-        //Load meshes for all entities in chunk
         for(Entity e : r.entities){
             BufferedMesh& m = ecs->GetComponent<BufferedMesh>(e);
             bool entStatus = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
             if(entStatus){
-                r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e));
+                r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e), m.meshID);
             }
-
-            //If entstatus = false, unload oldest chunk and try again
-            
         }
         chunkMgr.Load(t, xOffset, yOffset, zOffset);
     };
 
-    
-
-    for (int i = 0; i <= chunkMgr.loadRadius; ++i) {
-        for (int x = -i; x <= i; ++x) {
-            for (int y = -i; y <= i; ++y) {
-                for (int z = -i; z <= i; ++z) {
-                    if (std::max({std::abs(x), std::abs(y), std::abs(z)}) != i) {
-                        continue; // Skip inner chunks
-                    }
-
-                    Chunk r = chunkMgr.Get(t, x, y, z);
-                    if (!r.isLoaded) {
-                        LoadChunk(t, x, y, z, r);
-                    }
+    for (int i = -chunkMgr.loadRadius; i <= chunkMgr.loadRadius; i++){
+        for(int j = -chunkMgr.loadRadius; j <= 1; j++){
+            for(int k = -chunkMgr.loadRadius; k <= chunkMgr.loadRadius; k++){
+                Chunk& r = chunkMgr.Get(t, i, j, k);
+                if(!r.isLoaded){
+                    LoadChunk(t, i, j, k, r);
+                } 
+                else if (!r.isVisible){
+                    r.isVisible = true;
                 }
             }
         }
     }
-    
-
-    //For the chunkmanager
-    /*
-        Use a map to track loaded chunks
-        when loading a new chunk, 
-        check if its already loaded
-
-        check if the number of loaded chunks exceeds a limit
-        if it does, unload the least recently used chunk
-    */
-
 
     for (size_t i = 0; i < chunkMgr.activeChunks.size(); i++)
     {
         Chunk& chunk = chunkMgr.chunks[chunkMgr.activeChunks[i]];
         if(!chunk.isVisible) continue;
 
-        //If difference between chunk pos and camera pos is greater than load radius, unload chunk
         int diffX = std::abs(chunkMgr.activeChunks[i].x - (int)glm::floor(t.position.x / chunkMgr.chunkSize));
         int diffY = std::abs(chunkMgr.activeChunks[i].y - (int)glm::floor(t.position.y / chunkMgr.chunkSize));
         int diffZ = std::abs(chunkMgr.activeChunks[i].z - (int)glm::floor(t.position.z / chunkMgr.chunkSize));  
         if (std::max({diffX, diffY, diffZ}) > chunkMgr.loadRadius) {
-            std::cout << "Unloading Chunk at (" << chunkMgr.activeChunks[i].x << ", "
-                      << chunkMgr.activeChunks[i].y << ", "
-                      << chunkMgr.activeChunks[i].z << ")" << std::endl;
-            //chunk.UnLoad(*batch, *ecs);
             chunk.isVisible = false;
-            //chunkMgr.activeChunks.erase(chunkMgr.activeChunks.begin() + i);
-            //i--;
         }
-
-        //iF memory issue or too many chunks, unload oldest chunk
-        //chunk.unload(*batch, *ecs);
-        //chunk.isVisible = false;
     }
-
-    
 }
+
 void BatchedRenderer::Render()
 {
-
+    Timer timer("BatchedRenderer::Render", true);
+    
     batch->shader.Use();
-    batch->shader.SetMat4("view", glm::value_ptr(view), GL_FALSE); //Set the view matrix
-    batch->shader.SetMat4("projection", glm::value_ptr(projection), GL_FALSE); //Set projection matrix
+    batch->shader.SetMat4("view", glm::value_ptr(view), GL_FALSE);
+    batch->shader.SetMat4("projection", glm::value_ptr(projection), GL_FALSE);
 
-    //Change this later
-    //bind lightning
     batch->shader.SetVec3("lightPos", glm::value_ptr(lightPosition));
     batch->shader.SetFloat("ambient", ambient);
 
-
-    batch->Bind();
-    batch->Draw();
+    {
+        Timer t("Batch Bind", true);
+        batch->Bind();
+    }
+    
+    {
+        Timer t("Batch Draw", true);
+        batch->Draw();
+    }
 }
 
 void BatchedRenderer::DebugTrace()
 {
+    // Profiling
+    ProfileData::PrintStats();
+    ProfileData::Reset();
+    
     std::cout << "\n=== BatchedRenderer Debug Trace ===" << std::endl;
     std::cout << "\n--- Vertex Buffer ---" << std::endl;
     batch->vb.GetDebugInfo();

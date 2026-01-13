@@ -58,9 +58,15 @@ namespace std {
     };
 }
 
+struct EntityDrawInfo{
+    Entity entity;
+    GPUMemoryHandle handle;
+    int MeshID;
+};
+
 struct Chunk{
     std::vector<Entity> entities;
-    std::vector<GPUMemoryHandle> gpuHandles;
+    std::vector<EntityDrawInfo> gpuHandles;
     std::unordered_map<Entity, size_t> entityToHandleIndex;
     bool isLoaded = false;
     bool isVisible = false;
@@ -76,8 +82,8 @@ struct Chunk{
     void UnLoad(BufferedBatch& batch, ECS& ecs){
         if(!isLoaded) return;
         for(Entity e : entities){
-            BufferedMesh& m = ecs.GetComponent<BufferedMesh>(e);
-            GPUMemoryHandle handle = ecs.GetComponent<GPUMemoryHandle>(e);
+            EntityDrawInfo drawinfo = gpuHandles[entityToHandleIndex[e]];
+            GPUMemoryHandle handle = drawinfo.handle;
             batch.Unload(handle);
         }
         gpuHandles.clear();
@@ -85,16 +91,22 @@ struct Chunk{
         isLoaded = false;
     }
 
-    void LoadHandle(Entity e, GPUMemoryHandle newHandle){
+    void LoadHandle(Entity e, GPUMemoryHandle newHandle, int meshID){
+
         if(entityToHandleIndex.find(e) != entityToHandleIndex.end()){
             size_t index = entityToHandleIndex[e];
-            gpuHandles[index] = newHandle;
+            gpuHandles[index] = {e, newHandle, meshID};
+        }
+
+        else{
+            gpuHandles.push_back({e, newHandle, meshID});
+            entityToHandleIndex[e] = gpuHandles.size() - 1;
         }
     }
 
     GPUMemoryHandle Remove(Entity e){
         entities.erase(std::remove(entities.begin(), entities.end(), e), entities.end());
-        GPUMemoryHandle handle = gpuHandles[entityToHandleIndex[e]];
+        GPUMemoryHandle handle = gpuHandles[entityToHandleIndex[e]].handle;
         gpuHandles.erase(gpuHandles.begin() + entityToHandleIndex[e]);
         entityToHandleIndex.erase(e);
         return handle;
@@ -104,7 +116,7 @@ struct Chunk{
 
 struct ChunkManager{
     std::unordered_map<ChunkPos, Chunk> chunks;
-    float chunkSize = 16.0f;
+    float chunkSize = 8.0f;
     int loadRadius = 2;
 
     FreshQueue<ChunkPos> loadOrderQueue;
@@ -133,7 +145,7 @@ struct ChunkManager{
         chunk.isVisible = true;
     }
 
-    void ValidateEntityLocation(TransformComponent& t, Entity e, ChunkPos oldPos){
+    void ValidateEntityLocation(TransformComponent& t, int meshID, Entity e, ChunkPos oldPos){
         ChunkPos currentPos = {
             (int)glm::floor(t.position.x / chunkSize),
             (int)glm::floor(t.position.y / chunkSize),
@@ -148,7 +160,7 @@ struct ChunkManager{
         GPUMemoryHandle handle = chunks[oldPos].Remove(e);
 
         chunks[currentPos].Add(e);
-        chunks[currentPos].LoadHandle(e, handle);
+        chunks[currentPos].LoadHandle(e, handle, meshID);
     }
 
 

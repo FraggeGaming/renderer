@@ -8,7 +8,7 @@ void Game::CreateController(Entity e_ptr){
     float speed = 0.5f;
 
     
-    float cameraSpeed = 5.0f;
+    float cameraSpeed = 7.0f;
 
     Camera* cam_ptr = &engine->camera;
     Engine* engine = this->engine;
@@ -18,6 +18,12 @@ void Game::CreateController(Entity e_ptr){
         if (auto* batchedRenderer = engine->GetSystem<BatchedRenderer>()) {
             batchedRenderer->DebugTrace();
         }
+     });
+
+
+     engine->ctx->input->BindKey(GLFW_KEY_ESCAPE,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
+             std::exit(0);
+
      });
 
      engine->ctx->input->BindKey(GLFW_KEY_C,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
@@ -164,9 +170,9 @@ void Game::Start()
     std::cout << "Added Mesh with ID: " << mid << std::endl;
 
 
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 30; i++)
     {
-        for (size_t j = 0; j < 100; j++)
+        for (size_t j = 0; j < 30; j++)
         {
             Entity e = engine->ecs->CreateEntity();
             BufferedMesh m = BufferedMesh();

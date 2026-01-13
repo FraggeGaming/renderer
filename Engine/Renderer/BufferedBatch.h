@@ -35,7 +35,6 @@ public:
     size_t vertexBufferSize;
     size_t indexBufferSize;
 
-    std::vector<glm::mat4> transforms;
 
     Shader shader;
     
@@ -55,14 +54,11 @@ public:
     BufferedBatch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull);
     ~BufferedBatch();
 
-
-    int AddTransform(glm::mat4 t);
     void UpdateTransform(int idx, glm::mat4 t);
     void Unload(GPUMemoryHandle handle);
     void AddLayout(const VertexBufferLayout& layout);
     void Bind();
     void Draw();
-    void UpdateCommandBuffer();
 
     void UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable);
     void SetDrawVector(const std::vector<GPUMemoryHandle>& commands);

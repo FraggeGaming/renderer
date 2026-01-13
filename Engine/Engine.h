@@ -7,8 +7,8 @@
 
 #include "Renderer/VertexBufferLayout.h"
 #include "Shader/Shader.h"
+#include "Renderer/RenderTypes.h"
 #include "ECS/ECS.h"
-#include "Renderer/Renderer.h"
 #include "InputHandler.h"
 #include "AppContext.h"
 #include "ECS/Systems/System.h"

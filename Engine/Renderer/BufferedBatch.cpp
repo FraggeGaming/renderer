@@ -21,9 +21,6 @@ BufferedBatch::BufferedBatch(Shader shader, size_t vertexBufferBytes, size_t ind
 
     transformBuffer.SetBinding(0); // Binding 0 for transforms
     instanceLookupBuffer.SetBinding(1); // Binding 1
-
-    //For lookuptable
-    //glGenBuffers(1, &lookupBuffer);
 }
 
 BufferedBatch::~BufferedBatch()
@@ -33,21 +30,10 @@ BufferedBatch::~BufferedBatch()
     vb.UnBind();
     ib.UnBind();
     glDeleteBuffers(1, &indBuffer);
-    //glDeleteBuffers(1, &lookupBuffer);
-}
-
-int BufferedBatch::AddTransform(glm::mat4 t)  
-{
-    int size = transforms.size();
-    transforms.push_back(t);
-
-    return size;
 }
 
 void BufferedBatch::UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable) {
     instanceLookupBuffer.AddData(0, lookupTable.size() * sizeof(int), lookupTable.data());
-    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, lookupBuffer);
-    //glBufferData(GL_SHADER_STORAGE_BUFFER, lookupTable.size() * sizeof(int), lookupTable.data(), GL_DYNAMIC_DRAW);
 }
 
 void BufferedBatch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) {
@@ -129,7 +115,6 @@ void BufferedBatch::Bind()
 
     transformBuffer.Bind();
     instanceLookupBuffer.Bind();
-    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, lookupBuffer);      // Lookup Table
 
 }
 
@@ -143,14 +128,6 @@ void BufferedBatch::Draw()
     sizeof(GPUMemoryHandle));
 
 }
-
-
-
-void BufferedBatch::UpdateCommandBuffer()
-{
-    
-}
-
 
 void BufferedBatch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action)
 {

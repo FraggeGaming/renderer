@@ -26,7 +26,7 @@ class BatchedRenderer : public System{
 
     void FetchChunk(TransformComponent& t, int xOffset, int yOffset, int zOffset);
     void SetProjection(glm::mat4 mat);
-    void TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, BufferedMesh& m, GPUMemoryHandle& h);
+    void TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, int meshID, GPUMemoryHandle& h);
 
     void Start() override;
     void Update(float dt) override;
