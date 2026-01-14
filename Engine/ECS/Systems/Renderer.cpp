@@ -68,15 +68,11 @@ bool Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
 {
     Timer timer("LoadMesh", true);
     Mesh mesh = engine->assetManager.Get(m.meshID);
-    
-    std::cout << "LoadMesh entity=" << id << " meshID=" << m.meshID 
-              << " verts=" << mesh.vertices.size() 
-              << " indices=" << mesh.indices.size() << std::endl;
-    
+
     GPUMemoryHandle handle = batch->Load(m, mesh, t);
 
     if (!handle.IsValid()) {
-        std::cout << "Failed to load mesh - handle is invalid (GPU memory full?)" << std::endl;
+        std::cout << "Failed to load mesh - handle is invalid" << std::endl;
         return false;
     }
     
@@ -254,18 +250,27 @@ void Renderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int z
         }
     }
 
+
+    //TODO: Unload distant chunks
+    std::vector<ChunkPos> toRemove;
     for (size_t i = 0; i < chunkMgr.activeChunks.size(); i++)
     {
         Chunk& chunk = chunkMgr.chunks[chunkMgr.activeChunks[i]];
-        if(!chunk.isVisible) continue;
 
         int diffX = std::abs(chunkMgr.activeChunks[i].x - (int)glm::floor(t.position.x / chunkMgr.chunkSize));
         int diffY = std::abs(chunkMgr.activeChunks[i].y - (int)glm::floor(t.position.y / chunkMgr.chunkSize));
         int diffZ = std::abs(chunkMgr.activeChunks[i].z - (int)glm::floor(t.position.z / chunkMgr.chunkSize));  
         if (std::max({diffX, diffY, diffZ}) > chunkMgr.loadRadius) {
-            chunk.isVisible = false;
+            toRemove.push_back(chunkMgr.activeChunks[i]);
+            
         }
     }
+
+    for(ChunkPos p : toRemove){
+        chunkMgr.Unload(p).UnLoad(batch.get(), ecs);
+    }
+
+
 }
 
 void Renderer::Render()
@@ -304,7 +309,7 @@ void Renderer::DebugTrace()
     batch->ib.GetDebugInfo();
     
     std::cout << "\n--- SSBO Buffer (Transforms) ---" << std::endl;
-    batch->transformBuffer.GetDebugInfo(false);
+    batch->transformBuffer.GetDebugInfo(false); // Dont print the buffer contents
     
     std::cout << "\n--- Geometry Registry ---" << std::endl;
     std::cout << "Total registered geometries: " << batch->geometryRegistry.size() << std::endl; 

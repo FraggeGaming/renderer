@@ -98,7 +98,6 @@ struct Chunk{
 
     void UnLoad(Batch* batch, ECS* ecs){
         if(!isLoaded) {
-            std::cout << "UnLoad skipped - chunk not loaded" << std::endl;
             return;
         }
         
@@ -192,12 +191,13 @@ struct ChunkManager{
         chunk.isVisible = false;
     }
 
-    void Unload(ChunkPos pos){
+    Chunk& Unload(ChunkPos pos){
         Chunk& chunk = chunks[pos];
         loadOrderQueue.popIfExist(pos);
         activeChunks.erase(std::remove(activeChunks.begin(), activeChunks.end(), pos), activeChunks.end());
         chunk.isLoaded = false;
         chunk.isVisible = false;
+        return chunk;
     }
 
     void UnloadOldestChunk(Batch* batch, ECS* ecs){
