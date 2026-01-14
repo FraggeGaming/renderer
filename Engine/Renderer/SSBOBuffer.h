@@ -10,6 +10,7 @@ protected:
 public:
     SSBOBuffer(const void* data, unsigned int size);
     SSBOBuffer();
+    SSBOBuffer(unsigned int size);
 
     void SetBinding(unsigned int binding){
         m_BindingPoint = binding;

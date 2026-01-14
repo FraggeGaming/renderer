@@ -31,7 +31,7 @@ public:
     size_t vertexOffset = 0;
     size_t indexOffset = 0;
 
-    // Sizes for GPU buffers (in bytes). These are configured at construction time.
+    // Sizes for GPU buffers (in bytes)
     size_t vertexBufferSize;
     size_t indexBufferSize;
 
@@ -51,7 +51,7 @@ public:
 
     std::unordered_map<int, MeshGeometryInfo> geometryRegistry;
 
-    Batch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull);
+    Batch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull, size_t transformBufferSize = 64ull * 1024ull * 1024ull);
     ~Batch();
 
     void UpdateTransform(int idx, glm::mat4 t);

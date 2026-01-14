@@ -8,4 +8,8 @@ struct GPUMemoryHandle  {
     uint32_t vboOffset;    // offset in VBO
     uint32_t baseInstance;  // usually 0
     uint32_t ssboIndex;   // index in SSBO
+
+    bool IsValid() const {
+        return count != 0 && instanceCount != 0;
+    }
 };

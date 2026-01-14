@@ -5,6 +5,7 @@
 #include "../../Components/TransformComponent.h"
 
 #include "../../Components/GPUMemoryHandle.h"
+#include "../../ChunkManager.h"
 
 class Renderer : public System{
 
@@ -13,6 +14,7 @@ class Renderer : public System{
     public:
 
     bool UseChunking = true;
+    ChunkManager chunkMgr;
 
     Renderer(Shader shader, VertexBufferLayout layout);
 
@@ -27,6 +29,10 @@ class Renderer : public System{
 
     void FetchChunk(TransformComponent& t, int xOffset, int yOffset, int zOffset);
     void SetProjection(glm::mat4 mat);
+
+    void ClearUnseenChunks(){
+        chunkMgr.UnloadAllUnseen(batch.get(), ecs);
+    }
     
 
     void Start() override;

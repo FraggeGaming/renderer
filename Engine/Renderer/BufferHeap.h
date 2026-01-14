@@ -48,6 +48,7 @@ struct Heap{
             return outOfMemory;
         }
 
+        //TODO: because i switched to non resizable buffers, mby change this
         //Grow the heap
         blocks.push_back({allocatedSize, size, false});
         allocatedSize += size;

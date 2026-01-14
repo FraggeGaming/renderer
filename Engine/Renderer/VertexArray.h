@@ -13,6 +13,7 @@ private:
 
 public:
     VertexArray();
+    
 
     ~VertexArray();
 

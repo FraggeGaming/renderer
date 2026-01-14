@@ -34,21 +34,13 @@ public:
     }
 
     virtual MemoryBlock& AddData(size_t size, const void* data) {
-        
-        bool cheapGPUProblem = false;
-        
+                
         MemoryBlock& block = heap.Allocate(size);
 
         if (block.size == 0) {
 
-            if(Resize(heap.allocatedSize * 2)){
-                block = heap.Allocate(size);
-
-            }
-
-            else{
-                return block;
-            }
+            std::cout << GetBufferName() << ": Failed to allocate " << size << " bytes of buffer memory." << std::endl;
+            return block;
             
         }
         
@@ -58,36 +50,30 @@ public:
     }
 
     virtual bool Resize(size_t newSize) {
+
         size_t m_Size = GetSize();
         if (newSize == m_Size) return true;
 
         Bind();
-        
-        // Only copy old data if buffer has data
-        std::vector<char> oldData;
-        if (m_Size > 0) {
-            oldData.resize(m_Size);
-            glGetBufferSubData(GetBufferType(), 0, m_Size, oldData.data());
-        }
 
-        glBufferData(GetBufferType(), newSize, nullptr, GL_DYNAMIC_DRAW);
-        
+        unsigned int new_buffer;
+        glBindBuffer(GL_COPY_READ_BUFFER, m_RendererID);
+        glGenBuffers (1, &new_buffer);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, new_buffer);
+
+        glCopyBufferSubData (GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, newSize);
+        m_RendererID = new_buffer;
+
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cout << GetBufferName() << ": GPU allocation failed with error " << error << std::endl;
             return false;
         }
         
-        // Only restore old data if there was any
-        if (m_Size > 0) {
-            glBufferSubData(GetBufferType(), 0, m_Size, oldData.data());
-        }
-
         
         heap.blocks.push_back(MemoryBlock{heap.allocatedSize, newSize - heap.allocatedSize, true});
         heap.totalSize = newSize;
 
-        std::cout << GetBufferName() << ": Resized buffer to " << newSize << " bytes from " << m_Size << " bytes." << std::endl;
         return true;
     }
 

@@ -8,8 +8,8 @@
 #include <algorithm>
 
 
-Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes)
-: vertexBufferSize(vertexBufferBytes), indexBufferSize(indexBufferBytes), vb(nullptr, (unsigned int)vertexBufferSize), ib(nullptr, (unsigned int)indexBufferSize), shader(shader)
+Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes, size_t transformBufferSize)
+: vertexBufferSize(vertexBufferBytes), indexBufferSize(indexBufferBytes), vb((unsigned int)vertexBufferSize), ib((unsigned int)indexBufferSize), shader(shader)
 {
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -64,6 +64,11 @@ GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)
         MemoryBlock& vBlock = vb.AddData(vBytes, (const void*)mesh.vertices.data());
         MemoryBlock& iBlock = ib.AddData(iBytes, (const void*)mesh.indices.data());
 
+        if(vBlock.size == 0 || iBlock.size == 0){
+            //DebugPrintGPUMemoryHandle({}, meshId, "LoadFailed");
+            return GPUMemoryHandle{0,0,0,0,0, 0};
+        }
+
         geometryRegistry[meshId] = {
             (unsigned int)mesh.indices.size(),
             (unsigned int)(iBlock.offset / sizeof(unsigned int)),
@@ -74,6 +79,11 @@ GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)
     // Ensure SSBO has space for a new transform
     //EnsureSSBOCapacity(sizeof(glm::mat4));
     MemoryBlock& ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
+
+    if(ssboBlock.size == 0){
+        //DebugPrintGPUMemoryHandle({}, meshId, "LoadFailed");
+        return GPUMemoryHandle{0,0,0,0,0, 0};
+    }
 
     GPUMemoryHandle handle = {};
     MeshGeometryInfo& geo = geometryRegistry[meshId];
@@ -94,6 +104,9 @@ GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)
 
 void Batch::Unload(GPUMemoryHandle handle)
 {
+    std::cout << "Batch::Unload - vbo=" << handle.vboOffset 
+              << " ibo=" << handle.indexOffset 
+              << " ssbo=" << handle.ssboIndex << std::endl;
     vb.Free(handle.vboOffset * sizeof(Vertex));
     ib.Free(handle.indexOffset * sizeof(unsigned int));
     transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));

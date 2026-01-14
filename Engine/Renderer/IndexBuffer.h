@@ -11,6 +11,7 @@ protected:
 
 public:
     IndexBuffer(const void* data, unsigned int count);
+    IndexBuffer(unsigned int count);
 
     void Bind() const override;
     void UnBind() const override;

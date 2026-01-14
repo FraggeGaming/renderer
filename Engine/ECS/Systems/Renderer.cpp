@@ -30,7 +30,7 @@
 
 */
 
-ChunkManager chunkMgr;
+
 
 glm::mat4 projection = glm::perspective(glm::radians(90.0f), 800.0f / 600.0f, 0.1f, 100.0f);
 glm::mat4 view;
@@ -41,7 +41,7 @@ float ambient = 0.2;
 
 Renderer::Renderer(Shader shader, VertexBufferLayout layout)
 {
-    batch = std::make_unique<Batch>(shader);
+    batch = std::make_unique<Batch>(shader, 1024*1024* 1024, 1024*1024, 500*64);
     batch->AddLayout(layout);
 }
 
@@ -58,7 +58,7 @@ void Renderer::SetCamera(glm::mat4 CameraMatrix)
 
 void Renderer::Add(Entity id, MeshCapsule &m, glm::mat4 t)
 {
-    LoadMesh(id, m, t);
+    //LoadMesh(id, m, t);
 
     chunkMgr.AddToChunk(engine->ecs->GetComponent<TransformComponent>(id), id);
 }
@@ -68,9 +68,17 @@ bool Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
 {
     Timer timer("LoadMesh", true);
     Mesh mesh = engine->assetManager.Get(m.meshID);
+    
+    std::cout << "LoadMesh entity=" << id << " meshID=" << m.meshID 
+              << " verts=" << mesh.vertices.size() 
+              << " indices=" << mesh.indices.size() << std::endl;
+    
     GPUMemoryHandle handle = batch->Load(m, mesh, t);
 
-    if (handle.ssboIndex == -1) return false;
+    if (!handle.IsValid()) {
+        std::cout << "Failed to load mesh - handle is invalid (GPU memory full?)" << std::endl;
+        return false;
+    }
     
     engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
     m.isLoaded = true;
@@ -216,6 +224,17 @@ void Renderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int z
             bool entStatus = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
             if(entStatus){
                 r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e), m.meshID);
+            } else {
+                std::cout << "Failed to load entity, attempting to free space..." << std::endl;
+                chunkMgr.UnloadOldestChunk(batch.get(), ecs);
+                // Retry after unloading
+                entStatus = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
+            }
+
+            if(entStatus){
+                r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e), m.meshID);
+            } else {
+                std::cout << "Failed to load entity after unloading a chunk.." << std::endl;
             }
         }
         chunkMgr.Load(t, xOffset, yOffset, zOffset);

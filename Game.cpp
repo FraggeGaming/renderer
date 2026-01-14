@@ -8,7 +8,7 @@ void Game::CreateController(Entity e_ptr){
     float speed = 0.5f;
 
     
-    float cameraSpeed = 7.0f;
+    float cameraSpeed = 15.0f;
 
     Camera* cam_ptr = &engine->camera;
     Engine* engine = this->engine;
@@ -30,6 +30,13 @@ void Game::CreateController(Entity e_ptr){
         if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
             batchedRenderer->UseChunking = !batchedRenderer->UseChunking;
             std::cout << "Renderer: UseChunking set to " << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
+        }
+     });
+
+     engine->ctx->input->BindKey(GLFW_KEY_K,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
+        if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
+            batchedRenderer->ClearUnseenChunks();
+            std::cout << "Clear chunks" << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
         }
      });
 
