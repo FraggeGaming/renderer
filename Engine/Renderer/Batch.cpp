@@ -11,7 +11,8 @@
 Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes, size_t transformBufferSize)
 : vertexBufferSize(vertexBufferBytes), indexBufferSize(indexBufferBytes), vb((unsigned int)vertexBufferSize), ib((unsigned int)indexBufferSize), shader(shader)
 {
-    glDisable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
