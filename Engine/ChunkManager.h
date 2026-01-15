@@ -115,6 +115,17 @@ struct Chunk{
         std::cout << "Cleared the chunk of data" << std::endl;
     }
 
+    void Clear(){
+        
+        
+        gpuHandles.clear();
+        entityToHandleIndex.clear();
+        isLoaded = false;
+        isVisible = false;
+
+        std::cout << "Cleared the chunk of data" << std::endl;
+    }
+
     void LoadHandle(Entity e, GPUMemoryHandle newHandle, int meshID){
 
         if(entityToHandleIndex.find(e) != entityToHandleIndex.end()){
@@ -141,7 +152,7 @@ struct Chunk{
 struct ChunkManager{
     std::unordered_map<ChunkPos, Chunk> chunks;
     float chunkSize = 16.0f;
-    int loadRadius = 2;
+    int loadRadius = 4;
 
     FreshQueue<ChunkPos> loadOrderQueue;
     std::vector<ChunkPos> activeChunks;

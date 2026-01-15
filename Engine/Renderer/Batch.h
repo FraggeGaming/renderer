@@ -63,7 +63,9 @@ public:
     void UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable);
     void SetDrawVector(const std::vector<GPUMemoryHandle>& commands);
 
+    GPUMemoryHandle LoadInternal(int meshId, Mesh mesh, glm::mat4 t);
     GPUMemoryHandle Load(MeshCapsule& m, Mesh mesh, glm::mat4 t);
+    GPUMemoryHandle Load(int meshID, Mesh mesh, glm::mat4 t);
 
     // Debug helper: prints details about a GPU memory handle and associated mesh
     void DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action);

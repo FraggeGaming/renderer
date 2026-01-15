@@ -13,6 +13,7 @@ Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes, s
 {
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    //glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -53,6 +54,17 @@ void Batch::UpdateTransform(int idx, glm::mat4 t)
 GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)  
 {   
     int meshId = m.meshID; 
+
+    return LoadInternal(meshId, mesh, t);
+    
+}
+
+ GPUMemoryHandle Batch::Load(int meshID, Mesh mesh, glm::mat4 t){
+    return LoadInternal(meshID, mesh, t);
+}
+
+GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)  
+{   
 
     if(geometryRegistry.find(meshId) == geometryRegistry.end()){
         size_t vBytes = sizeof(Vertex) * mesh.vertices.size();

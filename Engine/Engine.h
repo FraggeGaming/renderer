@@ -131,7 +131,7 @@ struct AssetManager{
         return mesh.id;
     }
 
-    Mesh Get(int id){
+    Mesh& Get(int id){
         return meshStorage[meshMap[id]];
     }
 

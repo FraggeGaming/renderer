@@ -76,7 +76,7 @@ bool Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
         return false;
     }
     
-    engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
+    //engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
     m.isLoaded = true;
     return true;
 }
@@ -89,7 +89,7 @@ void Renderer::UnloadMesh(Entity id)
 
     GPUMemoryHandle& handle = ecs->GetComponent<GPUMemoryHandle>(id);
     batch->Unload(handle);
-    ecs->RemoveComponent<GPUMemoryHandle>(id);
+    //ecs->RemoveComponent<GPUMemoryHandle>(id);
 
 }
 
@@ -237,17 +237,17 @@ void Renderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int z
     };
 
     for (int i = -chunkMgr.loadRadius; i <= chunkMgr.loadRadius; i++){
-        for(int j = -chunkMgr.loadRadius; j <= 1; j++){
-            for(int k = -chunkMgr.loadRadius; k <= chunkMgr.loadRadius; k++){
-                Chunk& r = chunkMgr.Get(t, i, j, k);
-                if(!r.isLoaded){
-                    LoadChunk(t, i, j, k, r);
-                } 
-                else if (!r.isVisible){
-                    r.isVisible = true;
-                }
+        
+        for(int k = -chunkMgr.loadRadius; k <= chunkMgr.loadRadius; k++){
+            Chunk& r = chunkMgr.Get(t, i, 0, k);
+            if(!r.isLoaded){
+                LoadChunk(t, i, 0, k, r);
+            } 
+            else if (!r.isVisible){
+                r.isVisible = true;
             }
         }
+        
     }
 
 

@@ -235,11 +235,11 @@ void Game::Start()
 
 void Game::Update(float dt)
 {
-    ecs->view<TransformComponent>().each([&](int entityId, TransformComponent& t) {
+    // ecs->view<TransformComponent>().each([&](int entityId, TransformComponent& t) {
         
-        t.AddRotation(glm::vec3(0.0f, 2*dt, 1*dt));
+    //     t.AddRotation(glm::vec3(0.0f, 2*dt, 1*dt));
         
-    });
+    // });
 
 }
 
