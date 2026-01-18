@@ -22,7 +22,7 @@ class Renderer : public System{
     void SetCamera(glm::mat4 CameraMatrix);
 
     void Add(Entity id, MeshCapsule& m, glm::mat4 t);
-    bool LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t);
+    GPUMemoryHandle LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t);
     void UnloadMesh(Entity id);
 
     void Remove(Entity id);

@@ -204,6 +204,7 @@ void Game::Start()
 
     //Set input
 
+
     
     ObjReader* reader_ptr = &reader;
     Engine* engine = this->engine;

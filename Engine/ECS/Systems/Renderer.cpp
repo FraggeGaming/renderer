@@ -64,21 +64,18 @@ void Renderer::Add(Entity id, MeshCapsule &m, glm::mat4 t)
 }
 
 
-bool Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
+GPUMemoryHandle Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
 {
     Timer timer("LoadMesh", true);
     Mesh mesh = engine->assetManager.Get(m.meshID);
 
     GPUMemoryHandle handle = batch->Load(m, mesh, t);
 
-    if (!handle.IsValid()) {
-        std::cout << "Failed to load mesh - handle is invalid" << std::endl;
-        return false;
+    if (handle.IsValid()) {
+        m.isLoaded = true;
     }
     
-    //engine->ecs->AddComponent<GPUMemoryHandle>(id, handle);
-    m.isLoaded = true;
-    return true;
+    return handle;
 }
 
 
@@ -217,18 +214,18 @@ void Renderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int z
         
         for(Entity e : r.entities){
             MeshCapsule& m = ecs->GetComponent<MeshCapsule>(e);
-            bool entStatus = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
-            if(entStatus){
-                r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e), m.meshID);
+            GPUMemoryHandle handle = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
+            if(handle.IsValid()){
+                r.LoadHandle(e, handle, m.meshID);
             } else {
                 std::cout << "Failed to load entity, attempting to free space..." << std::endl;
                 chunkMgr.UnloadOldestChunk(batch.get(), ecs);
                 // Retry after unloading
-                entStatus = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
+                handle = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
             }
 
-            if(entStatus){
-                r.LoadHandle(e, ecs->GetComponent<GPUMemoryHandle>(e), m.meshID);
+            if(handle.IsValid()){
+                r.LoadHandle(e,handle, m.meshID);
             } else {
                 std::cout << "Failed to load entity after unloading a chunk.." << std::endl;
             }
