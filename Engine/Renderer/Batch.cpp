@@ -40,9 +40,9 @@ void Batch::UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable) {
 void Batch::SetDrawVector(const std::vector<GPUMemoryHandle>& commands) {
     glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indBuffer);
     glBufferData(GL_DRAW_INDIRECT_BUFFER,
-                 commands.size() * sizeof(GPUMemoryHandle),
-                 commands.data(),
-                 GL_DYNAMIC_DRAW);
+                commands.size() * sizeof(GPUMemoryHandle),
+                commands.data(),
+                GL_DYNAMIC_DRAW);
     drawCommands = commands;
 }
 
@@ -65,14 +65,12 @@ GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)
 
 GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)  
 {   
+    //For concurrency
+    std::lock_guard<std::mutex> lock(_mutex);
 
     if(geometryRegistry.find(meshId) == geometryRegistry.end()){
         size_t vBytes = sizeof(Vertex) * mesh.vertices.size();
         size_t iBytes = sizeof(unsigned int) * mesh.indices.size();
-
-        //For dynamic resizing of buffers
-        //EnsureVertexCapacity(vBytes);
-        //EnsureIndexCapacity(iBytes);
 
         MemoryBlock& vBlock = vb.AddData(vBytes, (const void*)mesh.vertices.data());
         MemoryBlock& iBlock = ib.AddData(iBytes, (const void*)mesh.indices.data());
@@ -89,8 +87,7 @@ GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)
         };
     }
 
-    // Ensure SSBO has space for a new transform
-    //EnsureSSBOCapacity(sizeof(glm::mat4));
+
     MemoryBlock& ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
 
     if(ssboBlock.size == 0){
@@ -117,6 +114,7 @@ GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)
 
 void Batch::Unload(GPUMemoryHandle handle)
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     vb.Free(handle.vboOffset * sizeof(Vertex));
     ib.Free(handle.indexOffset * sizeof(unsigned int));
     transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
@@ -158,11 +156,11 @@ void Batch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID,
     else std::cout << "MeshID: (unknown) ";
 
     std::cout << "count: " << handle.count
-              << " instanceCount: " << handle.instanceCount
-              << " indexOffset: " << handle.indexOffset
-              << " vboOffset: " << handle.vboOffset
-              << " baseInstance: " << handle.baseInstance
-              << " ssboIndex: " << handle.ssboIndex;
+            << " instanceCount: " << handle.instanceCount
+            << " indexOffset: " << handle.indexOffset
+            << " vboOffset: " << handle.vboOffset
+            << " baseInstance: " << handle.baseInstance
+            << " ssboIndex: " << handle.ssboIndex;
 
     // Print registry / buffer summary
     size_t registeredGeometries = geometryRegistry.size();
@@ -172,11 +170,11 @@ void Batch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID,
     for (const auto &c : drawCommands) totalInstances += c.instanceCount;
 
     std::cout << " | registeredGeometries: " << registeredGeometries
-              << " drawCommands: " << drawCmds
-              << " totalInstances: " << totalInstances
-              << " vertexOffset(bytes): " << vertexOffset
-              << " indexOffset(bytes): " << indexOffset
-              << std::endl;
+            << " drawCommands: " << drawCmds
+            << " totalInstances: " << totalInstances
+            << " vertexOffset(bytes): " << vertexOffset
+            << " indexOffset(bytes): " << indexOffset
+            << std::endl;
 
     // Print mesh geometry info
     if (meshID >= 0) {
@@ -184,40 +182,9 @@ void Batch::DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID,
         if (it != geometryRegistry.end()){
             const MeshGeometryInfo &g = it->second;
             std::cout << "   GeometryInfo -> indexCount: " << g.indexCount
-                      << " indexOffset(elements): " << g.indexOffset
-                      << " vboOffset(vertices): " << g.vboOffset
-                      << std::endl;
+                    << " indexOffset(elements): " << g.indexOffset
+                    << " vboOffset(vertices): " << g.vboOffset
+                    << std::endl;
         }
     }
-}
-
-
-void Batch::EnsureVertexCapacity(size_t neededBytes)
-{
-    if (vertexOffset + neededBytes <= vertexBufferSize) return;
-
-    size_t newSize = std::max(vertexBufferSize * 2, vertexOffset + neededBytes);
-    std::cout << "BufferedBatch: Growing vertex buffer " << vertexBufferSize << " -> " << newSize << " bytes" << std::endl;
-    vb.Resize(newSize);
-    vertexBufferSize = newSize;
-}
-
-void Batch::EnsureIndexCapacity(size_t neededBytes)
-{
-    if (indexOffset + neededBytes <= indexBufferSize) return;
-
-    size_t newSize = std::max(indexBufferSize * 2, indexOffset + neededBytes);
-    std::cout << "BufferedBatch: Growing index buffer " << indexBufferSize << " -> " << newSize << " bytes" << std::endl;
-    ib.Resize(newSize);
-    indexBufferSize = newSize;
-}
-
-void Batch::EnsureSSBOCapacity(size_t neededBytes)
-{
-    if (neededBytes <= transformBuffer.GetSize()) return;
-
-    size_t newSize = std::max(transformBuffer.GetSize() * 2,  neededBytes);
-    if (newSize == 0) newSize = 1024 * 1024; // fallback
-    std::cout << "BufferedBatch: Growing SSBO buffer " << transformBuffer.GetSize() << " -> " << newSize << " bytes" << std::endl;
-    transformBuffer.Resize(newSize);
 }

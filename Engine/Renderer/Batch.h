@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <unordered_map>
+#include <mutex>
 
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -50,6 +51,8 @@ public:
     std::vector<GPUMemoryHandle> drawCommands;
 
     std::unordered_map<int, MeshGeometryInfo> geometryRegistry;
+
+    std::mutex _mutex;
 
     Batch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull, size_t transformBufferSize = 64ull * 1024ull * 1024ull);
     ~Batch();

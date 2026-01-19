@@ -1,0 +1,5 @@
+Batch pointer access::
+
+batch.load
+batch.LoadHandle
+batch.unload
