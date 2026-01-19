@@ -61,6 +61,18 @@ struct ChunkPos{
     bool operator!=(const ChunkPos& other) const {
         return x != other.x || y != other.y || z != other.z;
     }
+
+    ChunkPos Set(TransformComponent& t, float divider){
+        
+        x = (int)glm::floor(t.position.x / divider);
+        y = (int)glm::floor(t.position.y / divider);
+        z = (int)glm::floor(t.position.z / divider);
+        return *this;
+    }
+
+    std::string toString() const {
+        return "(" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")";
+    }
 };
 
 namespace std {
@@ -148,148 +160,3 @@ struct Chunk{
     }
 
 };
-
-struct ChunkManager{
-    std::unordered_map<ChunkPos, Chunk> chunks;
-    float chunkSize = 16.0f;
-    int loadRadius = 4;
-
-    FreshQueue<ChunkPos> loadOrderQueue;
-    std::vector<ChunkPos> activeChunks;
-
-    Chunk& Get(TransformComponent& t, int xOffset = 0, int yOffset = 0, int zOffset = 0){
-        ChunkPos pos = {
-            (int)glm::floor(t.position.x / chunkSize) + xOffset,
-            (int)glm::floor(t.position.y / chunkSize) + yOffset,
-            (int)glm::floor(t.position.z / chunkSize) + zOffset
-        };
-        return chunks[pos];
-    }
-
-    void Load(TransformComponent& t, int xOffset = 0, int yOffset = 0, int zOffset = 0){
-        
-        ChunkPos pos = {
-            (int)glm::floor(t.position.x / chunkSize) + xOffset,
-            (int)glm::floor(t.position.y / chunkSize) + yOffset,
-            (int)glm::floor(t.position.z / chunkSize) + zOffset
-        };
-        
-        Chunk& chunk = chunks[pos];
-        loadOrderQueue.push(pos);
-
-
-        if(chunk.isLoaded)
-            return;
-
-        
-        activeChunks.push_back(pos);
-        chunk.isLoaded = true;
-        chunk.isVisible = true;
-    }
-
-
-    void Unload(TransformComponent& t, int xOffset = 0, int yOffset = 0, int zOffset = 0){
-        ChunkPos pos = {
-            (int)glm::floor(t.position.x / chunkSize) + xOffset,
-            (int)glm::floor(t.position.y / chunkSize) + yOffset,
-            (int)glm::floor(t.position.z / chunkSize) + zOffset
-        };
-        
-        Chunk& chunk = chunks[pos];
-        loadOrderQueue.popIfExist(pos);
-        activeChunks.erase(std::remove(activeChunks.begin(), activeChunks.end(), pos), activeChunks.end());
-        chunk.isLoaded = false;
-        chunk.isVisible = false;
-    }
-
-    Chunk& Unload(ChunkPos pos){
-        Chunk& chunk = chunks[pos];
-        loadOrderQueue.popIfExist(pos);
-        activeChunks.erase(std::remove(activeChunks.begin(), activeChunks.end(), pos), activeChunks.end());
-        chunk.isLoaded = false;
-        chunk.isVisible = false;
-        return chunk;
-    }
-
-    void UnloadOldestChunk(Batch* batch, ECS* ecs){
-        if(loadOrderQueue.data.empty()) {
-            std::cout << "UnloadOldestChunk: No chunks to unload!" << std::endl;
-            return;
-        }
-        
-        ChunkPos oldest = loadOrderQueue.peek();
-        
-        chunks[oldest].UnLoad(batch, ecs);  //Unload on the GPU
-        Unload(oldest);  // Then mark as unloaded
-        loadOrderQueue.pop();  // Remove from queue
-    }
-
-    void UnloadAllUnseen(Batch* batch, ECS* ecs){
-        std::cout << "UnloadAllUnseen called - queue size: " << loadOrderQueue.data.size() 
-                  << ", active chunks: " << activeChunks.size() << std::endl;
-        
-        std::vector<ChunkPos> toRemove;
-        
-        for (ChunkPos p : loadOrderQueue.data)
-        {
-            Chunk& chunk = chunks[p];
-            
-            // Unload chunks that are out of range
-            if(chunk.isLoaded && !chunk.isVisible){
-                //std::cout << "Unloading unseen chunk at (" << p.x << ", " << p.y << ", " << p.z << ")" << std::endl;
-                chunk.UnLoad(batch, ecs);  //Unload on the GPU
-                Unload(p);  // Mark the chunkpos as unloaded
-                toRemove.push_back(p);
-            }
-        }
-        
-        std::cout << "Marked " << toRemove.size() << " chunks for removal" << std::endl;
-        
-        // Remove from loadOrderQueue
-        for(ChunkPos p : toRemove){
-            loadOrderQueue.popIfExist(p);
-        }
-
-        std::cout << "activechunks after cleanup:  " << activeChunks.size() << " chunks" << std::endl;
-    }
-
-    void ValidateEntityLocation(TransformComponent& t, int meshID, Entity e, ChunkPos oldPos){
-        ChunkPos currentPos = {
-            (int)glm::floor(t.position.x / chunkSize),
-            (int)glm::floor(t.position.y / chunkSize),
-            (int)glm::floor(t.position.z / chunkSize)
-        };
-
-        if(currentPos == oldPos) return;
-
-        std::cout << "ChunkManager: Moving entity " << e << " from chunk (" 
-                  << oldPos.x << ", " << oldPos.y << ", " << oldPos.z << ") to chunk ("
-                  << currentPos.x << ", " << currentPos.y << ", " << currentPos.z << ")" << std::endl;
-        GPUMemoryHandle handle = chunks[oldPos].Remove(e);
-
-        chunks[currentPos].Add(e);
-        chunks[currentPos].LoadHandle(e, handle, meshID);
-    }
-
-
-
-    void AddToChunk(TransformComponent& t, Entity e){
-        ChunkPos pos = {
-            (int)glm::floor(t.position.x / chunkSize),
-            (int)glm::floor(t.position.y / chunkSize),
-            (int)glm::floor(t.position.z / chunkSize)
-        };
-        chunks[pos].Add(e);
-    }
-
-    void RemoveFromChunk(TransformComponent& t, Entity e){
-        ChunkPos pos = {
-            (int)glm::floor(t.position.x / chunkSize),
-            (int)glm::floor(t.position.y / chunkSize),
-            (int)glm::floor(t.position.z / chunkSize)
-        };
-        chunks[pos].Remove(e);
-        
-    }
-};
-

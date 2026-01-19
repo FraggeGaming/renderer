@@ -10,6 +10,8 @@
 #include "Engine/Engine.h"
 
 #include "Engine/ECS/Systems/Renderer.h"
+#include "Engine/ECS/Systems/Chunker.h"
+
 #include "Game.h"
 
 struct Player{
@@ -48,6 +50,8 @@ void TestEngine(){
     engine.AddSystem(std::make_unique<Game>())->name =  "GameSystem";
 
     engine.AddSystem(std::make_unique<Renderer>(shader, layout))->name = "Renderer";
+    engine.AddSystem(std::make_unique<Chunker>()) -> name = "Chunk Manager";
+    
     engine.Run();
 
 }

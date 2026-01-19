@@ -18,27 +18,21 @@ void Game::CreateController(Entity e_ptr){
         if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
             batchedRenderer->DebugTrace();
         }
-     });
+    });
 
 
-     engine->ctx->input->BindKey(GLFW_KEY_ESCAPE,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-             std::exit(0);
+    engine->ctx->input->BindKey(GLFW_KEY_ESCAPE,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
+        std::exit(0);
 
-     });
+    });
 
-     engine->ctx->input->BindKey(GLFW_KEY_C,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-        if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
-            batchedRenderer->UseChunking = !batchedRenderer->UseChunking;
-            std::cout << "Renderer: UseChunking set to " << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
-        }
-     });
+    engine->ctx->input->BindKey(GLFW_KEY_C,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
+        
+    });
 
-     engine->ctx->input->BindKey(GLFW_KEY_K,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-        if (auto* batchedRenderer = engine->GetSystem<Renderer>()) {
-            batchedRenderer->ClearUnseenChunks();
-            std::cout << "Clear chunks" << (batchedRenderer->UseChunking ? "true" : "false") << std::endl;
-        }
-     });
+    engine->ctx->input->BindKey(GLFW_KEY_K,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
+        
+    });
 
     // ctx.input->BindKey(GLFW_KEY_UP,KEY_PRESS_TYPE::CONT ,[&](float dt){
         

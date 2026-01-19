@@ -9,6 +9,7 @@
 
 #include "../../Engine.h"
 #include "../../ChunkManager.h"
+#include "Chunker.h"
 
 /*
     TODO:
@@ -56,13 +57,6 @@ void Renderer::SetCamera(glm::mat4 CameraMatrix)
     view = CameraMatrix;
 }
 
-void Renderer::Add(Entity id, MeshCapsule &m, glm::mat4 t)
-{
-    //LoadMesh(id, m, t);
-
-    chunkMgr.AddToChunk(engine->ecs->GetComponent<TransformComponent>(id), id);
-}
-
 
 GPUMemoryHandle Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
 {
@@ -90,13 +84,6 @@ void Renderer::UnloadMesh(Entity id)
 
 }
 
-void Renderer::Remove(Entity id)
-{
-    UnloadMesh(id);
-
-    chunkMgr.RemoveFromChunk(ecs->GetComponent<TransformComponent>(id), id);
-    
-}
 
 void Renderer::SetProjection(glm::mat4 mat)
 {
@@ -106,9 +93,20 @@ void Renderer::SetProjection(glm::mat4 mat)
 void Renderer::Start()
 {
     std::cout << "Renderer System Started" << std::endl;
+    Chunker* objectChunker = engine->GetSystem<Chunker>();
+
     ecs->view<MeshCapsule, TransformComponent>().each([&](int entityId, MeshCapsule& m, TransformComponent& t) {
-        if(m.isLoaded == false){
-            Add(entityId, m, t.GetCombined());
+    
+        if(m.mode == MeshMode::CHUNKED){
+            objectChunker->Add(t, entityId);
+        }
+
+        else if(m.mode == MeshMode::STATIC){
+            //objectChunker->Add(t, entityId);
+        }
+
+        else if(m.mode == MeshMode::DYNAMIC){
+            //objectChunker->Add(t, entityId);
         }
     });
 
@@ -122,46 +120,29 @@ void Renderer::Update(float dt)
 
     TransformComponent CameraTransform;
     CameraTransform.position = engine->camera.m_cameraPosition;
+    engine->GetSystem<Chunker>()->SetLocation(CameraTransform);
 
+    //Track the mesh instances
     std::unordered_map<int, std::vector<int>> meshGroups;
+
+    //Track the transform index for the ssbo
     std::vector<int> lookupTable;
+
+    //Final draw commands to be sent to the GPU
     std::vector<GPUMemoryHandle> finalCommands;
 
-    if (UseChunking){
-        {
-            Timer t("FetchChunk", true);
-            FetchChunk(CameraTransform, 0, 0, 0);
-        }
+    std::vector<EntityDrawInfo> infoCommands = engine->GetSystem<Chunker>()->GenerateCommands();
+    for(EntityDrawInfo e : infoCommands){
+        TransformComponent& t = ecs->GetComponent<TransformComponent>(e.entity);
         
-        {
-            Timer t("Iterate Chunks", true);
-            std::vector<ChunkPos> loadedChunks = chunkMgr.activeChunks;
+        //Validate that entity is in right chunk
+        //If not, move it to the correct one
+        //Chunker.validateLoaction
 
-            //Get all loaded positions
-            for(ChunkPos pos : loadedChunks){
-                Chunk& chunk = chunkMgr.chunks[pos];
-                if(!chunk.isVisible) continue;
-
-                for(EntityDrawInfo e : chunk.gpuHandles){
-                    TransformComponent& t = ecs->GetComponent<TransformComponent>(e.entity);
-
-                    //Manual transform update for chunked entities 
-                    if (t.isDirty) {
-                        chunkMgr.ValidateEntityLocation(t, e.MeshID, e.entity, pos);
-                    }
-
-                    //Frustum culling and transform update
-                    TryRender(meshGroups, t, e.MeshID, e.handle);
-                }
-            }
-        }
+        //Frustum culling and transform update
+        TryRender(meshGroups, t, e.MeshID, e.handle);
     }
-    else {
-        Timer t("ECS View Iteration", true);
-        ecs->view<MeshCapsule, GPUMemoryHandle, TransformComponent>().each([&](int entityId, MeshCapsule& m, GPUMemoryHandle& h, TransformComponent& t) {
-            TryRender(meshGroups, t, m.meshID, h);
-        });
-    }
+    
     
     {
         Timer t("Create Draw Commands", true);
@@ -203,71 +184,6 @@ void Renderer::TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, 
     if (!engine->camera.isVisible(t)) return;
     
     meshGroups[meshID].push_back(h.ssboIndex);
-}
-
-
-void Renderer::FetchChunk(TransformComponent& t, int xOffset, int yOffset, int zOffset){
-    Timer timer("FetchChunk TOTAL", true);
-    
-    auto LoadChunk = [&](TransformComponent& t, int xOffset, int yOffset, int zOffset, Chunk& r){
-        Timer loadTimer("LoadChunk", true);
-        
-        for(Entity e : r.entities){
-            MeshCapsule& m = ecs->GetComponent<MeshCapsule>(e);
-            GPUMemoryHandle handle = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
-            if(handle.IsValid()){
-                r.LoadHandle(e, handle, m.meshID);
-            } else {
-                std::cout << "Failed to load entity, attempting to free space..." << std::endl;
-                chunkMgr.UnloadOldestChunk(batch.get(), ecs);
-                // Retry after unloading
-                handle = LoadMesh(e, m, ecs->GetComponent<TransformComponent>(e).GetCombined());
-            }
-
-            if(handle.IsValid()){
-                r.LoadHandle(e,handle, m.meshID);
-            } else {
-                std::cout << "Failed to load entity after unloading a chunk.." << std::endl;
-            }
-        }
-        chunkMgr.Load(t, xOffset, yOffset, zOffset);
-    };
-
-    for (int i = -chunkMgr.loadRadius; i <= chunkMgr.loadRadius; i++){
-        
-        for(int k = -chunkMgr.loadRadius; k <= chunkMgr.loadRadius; k++){
-            Chunk& r = chunkMgr.Get(t, i, 0, k);
-            if(!r.isLoaded){
-                LoadChunk(t, i, 0, k, r);
-            } 
-            else if (!r.isVisible){
-                r.isVisible = true;
-            }
-        }
-        
-    }
-
-
-    //TODO: Unload distant chunks
-    std::vector<ChunkPos> toRemove;
-    for (size_t i = 0; i < chunkMgr.activeChunks.size(); i++)
-    {
-        Chunk& chunk = chunkMgr.chunks[chunkMgr.activeChunks[i]];
-
-        int diffX = std::abs(chunkMgr.activeChunks[i].x - (int)glm::floor(t.position.x / chunkMgr.chunkSize));
-        int diffY = std::abs(chunkMgr.activeChunks[i].y - (int)glm::floor(t.position.y / chunkMgr.chunkSize));
-        int diffZ = std::abs(chunkMgr.activeChunks[i].z - (int)glm::floor(t.position.z / chunkMgr.chunkSize));  
-        if (std::max({diffX, diffY, diffZ}) > chunkMgr.loadRadius) {
-            toRemove.push_back(chunkMgr.activeChunks[i]);
-            
-        }
-    }
-
-    for(ChunkPos p : toRemove){
-        chunkMgr.Unload(p).UnLoad(batch.get(), ecs);
-    }
-
-
 }
 
 void Renderer::Render()

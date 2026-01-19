@@ -117,9 +117,6 @@ GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)
 
 void Batch::Unload(GPUMemoryHandle handle)
 {
-    std::cout << "Batch::Unload - vbo=" << handle.vboOffset 
-              << " ibo=" << handle.indexOffset 
-              << " ssbo=" << handle.ssboIndex << std::endl;
     vb.Free(handle.vboOffset * sizeof(Vertex));
     ib.Free(handle.indexOffset * sizeof(unsigned int));
     transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
