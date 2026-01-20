@@ -21,6 +21,11 @@ private:
 
     void UnloadChunk(ChunkPos p, Batch* batch);
 
+    void LoadBounded(Batch* batch);
+    void UnloadUnbounded(Batch* batch);
+
+    void ThreadedChunker(Batch* batch);
+
 public:
     std::unordered_map<ChunkPos, Chunk> chunks;
     ChunkPos loadReference = {0, 0, 0};

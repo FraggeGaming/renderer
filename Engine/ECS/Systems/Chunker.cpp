@@ -1,4 +1,7 @@
 #include "Chunker.h"
+#include <thread>
+#include <mutex>
+
 
 void Chunker::SetLoaded(Chunk& chunk, ChunkPos& pos){
     chunk.isLoaded = true;
@@ -105,7 +108,16 @@ void Chunker::Start() {
 void Chunker::Update(float dt) {
 
     Batch* batch = engine->GetSystem<Renderer>()->batch.get();
+    
+    std::thread t(ThreadedChunker, batch);
+}
 
+void Chunker::ThreadedChunker(Batch* batch){
+    LoadBounded(batch);
+    UnloadUnbounded(batch);
+}
+
+void Chunker::LoadBounded(Batch* batch){
     //Fetch and load chunks in the loadradius
     for (int i = -loadRadius; i <= loadRadius; i++){
         for(int k = -loadRadius; k <= loadRadius; k++){
@@ -113,7 +125,9 @@ void Chunker::Update(float dt) {
             LoadChunk(reference, batch);
         }
     }
+}
 
+void Chunker::UnloadUnbounded(Batch* batch){
     //Unload chunks outside the radius
     std::list<ChunkPos>::iterator it = loaded.begin();
     while (it != loaded.end()) {
