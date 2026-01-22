@@ -159,7 +159,6 @@ void Chunker::UnloadUnbounded(Batch* batch){
     std::list<ChunkPos>::iterator it = loaded.begin();
     while (it != loaded.end()) {
         if (!InLoadedBounds(*it)) {
-            std::cout << "[Chunker] Unloading chunk " << it->toString() << " (out of bounds)" << std::endl;
             UnloadChunk(*it, batch);
             it = loaded.erase(it);
             continue;
