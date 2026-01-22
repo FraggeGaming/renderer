@@ -8,6 +8,8 @@
 #include <algorithm>
 
 
+
+
 Batch::Batch(Shader shader, size_t vertexBufferBytes, size_t indexBufferBytes, size_t transformBufferSize)
 : vertexBufferSize(vertexBufferBytes), indexBufferSize(indexBufferBytes), vb((unsigned int)vertexBufferSize), ib((unsigned int)indexBufferSize), shader(shader)
 {
@@ -51,7 +53,7 @@ void Batch::UpdateTransform(int idx, glm::mat4 t)
     transformBuffer.AddData(idx * sizeof(glm::mat4), sizeof(glm::mat4), (const void*)&t);
 }
 
-GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)  
+GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh& mesh, glm::mat4 t)  
 {   
     int meshId = m.meshID; 
 
@@ -59,21 +61,92 @@ GPUMemoryHandle Batch::Load(MeshCapsule& m, Mesh mesh, glm::mat4 t)
     
 }
 
- GPUMemoryHandle Batch::Load(int meshID, Mesh mesh, glm::mat4 t){
+ GPUMemoryHandle Batch::Load(int meshID, Mesh& mesh, glm::mat4 t){
     return LoadInternal(meshID, mesh, t);
 }
 
-GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)  
+void Batch::GPULoad(AssetManager* assetManager){
+    if(gpuData.size() == 0) return;
+        
+    for(size_t i = 0; i < gpuData.size(); i++){
+        GPUData& d = gpuData[i];
+
+        if(d.vBlock.size != 0 && d.iBlock.size != 0){
+            Mesh& mesh = assetManager->Get(d.meshID);
+            vb.LoadSubData(d.vBlock, mesh.vertices.data());
+            ib.LoadSubData(d.iBlock, mesh.indices.data());
+        }
+
+        transformBuffer.LoadSubData(d.tBlock, &d.transform);
+    }
+
+    gpuData.clear();
+}
+
+//Reserve and load mesh without using gl calls.
+GPUMemoryHandle Batch::CPULoad(int meshID, Mesh& mesh, glm::mat4 t){
+    
+    GPUData data = {};
+    //If mesh is not registered
+    if(geometryRegistry.find(meshID) == geometryRegistry.end()){
+        size_t vBytes = sizeof(Vertex) * mesh.vertices.size();
+        size_t iBytes = sizeof(unsigned int) * mesh.indices.size();
+
+        MemoryBlock vblk = vb.Reserve(vBytes);
+        MemoryBlock iblk = ib.Reserve(iBytes);
+
+        data.vBlock = vblk;
+        data.iBlock = iblk;
+    
+        if(vblk.size == 0 || iblk.size == 0){
+            return GPUMemoryHandle{0,0,0,0,0, 0};
+        }
+
+        geometryRegistry[meshID] = {
+            (unsigned int)mesh.indices.size(),
+            (unsigned int)(iblk.offset / sizeof(unsigned int)),
+            (int)(vblk.offset / sizeof(Vertex))
+        };
+    }
+
+    //Load the transform component
+    MemoryBlock ssboBlock = transformBuffer.Reserve(sizeof(glm::mat4));
+    data.tBlock = ssboBlock;
+
+    if(ssboBlock.size == 0){
+        return GPUMemoryHandle{0,0,0,0,0, 0};
+    }
+
+    data.meshID = meshID;
+    data.transform = t;
+
+    GPUMemoryHandle handle = {};
+    MeshGeometryInfo& geo = geometryRegistry[meshID];
+    
+    handle.count = geo.indexCount;
+    handle.indexOffset = geo.indexOffset;
+    handle.vboOffset = geo.vboOffset;
+    handle.ssboIndex = ssboBlock.offset / sizeof(glm::mat4);
+    handle.instanceCount = 1;
+
+    data.handle = handle;
+    gpuData.push_back(data);
+    
+    // return data struct so we can load it on the render thread later
+    return handle;
+}
+
+GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh& mesh, glm::mat4 t)  
 {   
     //For concurrency
-    std::lock_guard<std::mutex> lock(_mutex);
+    //std::lock_guard<std::mutex> lock(_mutex);
 
     if(geometryRegistry.find(meshId) == geometryRegistry.end()){
         size_t vBytes = sizeof(Vertex) * mesh.vertices.size();
         size_t iBytes = sizeof(unsigned int) * mesh.indices.size();
 
-        MemoryBlock& vBlock = vb.AddData(vBytes, (const void*)mesh.vertices.data());
-        MemoryBlock& iBlock = ib.AddData(iBytes, (const void*)mesh.indices.data());
+        MemoryBlock vBlock = vb.AddData(vBytes, (const void*)mesh.vertices.data());
+        MemoryBlock iBlock = ib.AddData(iBytes, (const void*)mesh.indices.data());
 
         if(vBlock.size == 0 || iBlock.size == 0){
             //DebugPrintGPUMemoryHandle({}, meshId, "LoadFailed");
@@ -88,7 +161,7 @@ GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)
     }
 
 
-    MemoryBlock& ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
+    MemoryBlock ssboBlock = transformBuffer.AddData(sizeof(glm::mat4), &t);
 
     if(ssboBlock.size == 0){
         //DebugPrintGPUMemoryHandle({}, meshId, "LoadFailed");
@@ -112,11 +185,12 @@ GPUMemoryHandle Batch::LoadInternal(int meshId, Mesh mesh, glm::mat4 t)
 }
 
 
+
+
 void Batch::Unload(GPUMemoryHandle handle)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    vb.Free(handle.vboOffset * sizeof(Vertex));
-    ib.Free(handle.indexOffset * sizeof(unsigned int));
+    //std::lock_guard<std::mutex> lock(_mutex);
+    // Only free transform data
     transformBuffer.Free(handle.ssboIndex * sizeof(glm::mat4));
 }
 

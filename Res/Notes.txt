@@ -1,5 +1,4 @@
 Batch pointer access::
 
-batch.load
-batch.LoadHandle
+batch.load: check
 batch.unload

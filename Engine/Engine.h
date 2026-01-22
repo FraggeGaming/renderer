@@ -78,9 +78,9 @@ public:
 };
 
 class Timer {
-    std::chrono::time_point<std::chrono::high_resolution_clock> start;
     std::string name;
     bool silent;
+    std::chrono::time_point<std::chrono::high_resolution_clock> start;
 public:
     Timer(const std::string& name, bool silent = false) 
         : name(name), silent(silent), start(std::chrono::high_resolution_clock::now()) {}
@@ -153,7 +153,7 @@ public:
     std::vector<std::unique_ptr<System>> systems;
     
     std::unique_ptr<AppContext> ctx;
-    AssetManager assetManager;
+    std::unique_ptr<AssetManager> assetManager;
     //AppContext* context;
 
     int height = 900, width = 1200; //Add to context later?

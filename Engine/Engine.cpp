@@ -21,6 +21,7 @@ static void MouseControlledCamera_callback(GLFWwindow* window, double xpos, doub
 
 Engine::Engine(){
     ecs = std::make_unique<ECS>();
+    assetManager = std::make_unique<AssetManager>();
     systems.reserve(10);
 }
 

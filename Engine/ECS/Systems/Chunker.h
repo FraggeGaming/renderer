@@ -9,6 +9,8 @@
 class Chunker : public System{
 
 private:
+    std::vector<GPUData> data;
+
     void SetLoaded(Chunk& chunk, ChunkPos& pos);
 
     void SetUnloaded(Chunk& chunk , ChunkPos& pos);

@@ -4,10 +4,11 @@
 #include <iostream>
 #include <vector>
 
+
 class Buffer {
 protected:
-    unsigned int m_RendererID = 0;
     Heap heap;
+    unsigned int m_RendererID = 0;
 
     virtual GLenum GetBufferType() const = 0;
     virtual const char* GetBufferName() const = 0;
@@ -35,7 +36,7 @@ public:
 
     virtual MemoryBlock& AddData(size_t size, const void* data) {
                 
-        MemoryBlock& block = heap.Allocate(size);
+        MemoryBlock block = heap.Allocate(size);
 
         if (block.size == 0) {
 
@@ -46,6 +47,24 @@ public:
         
         Bind();
         glBufferSubData(GetBufferType(), block.offset, size, data);
+        return block;
+    }
+
+    virtual void LoadSubData(MemoryBlock& block, const void* data){
+        Bind();
+        glBufferSubData(GetBufferType(), block.offset, block.size, data);
+    }
+
+    virtual MemoryBlock Reserve(size_t size){
+        MemoryBlock block = heap.Allocate(size);
+
+        if (block.size == 0) {
+
+            std::cout << GetBufferName() << ": Failed to allocate " << size << " bytes of buffer memory." << std::endl;
+            return block;
+            
+        }
+        
         return block;
     }
 

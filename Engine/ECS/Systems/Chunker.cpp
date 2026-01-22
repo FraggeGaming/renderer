@@ -51,17 +51,16 @@ ChunkPos Chunker::Get(TransformComponent& t, int xoffset, int yoffset, int zoffs
     
 }
 
-bool Chunker::LoadChunk(ChunkPos p, Batch* batch){
-    Chunk& chunk = chunks[p];
-    if(chunk.isLoaded) return true;
 
 
+    /*
     for(size_t i = 0; i < chunk.entities.size(); i++){
         Entity entity = chunk.entities[i];
         int meshID = ecs->GetComponent<MeshCapsule>(entity).meshID;
-        Mesh& mesh = engine->assetManager.Get(meshID);
+        Mesh& mesh = engine->assetManager->Get(meshID);
         TransformComponent& transform = ecs->GetComponent<TransformComponent>(entity);
         GPUMemoryHandle handle = batch->Load(meshID, mesh, transform.GetCombined());
+        
         if (!handle.IsValid()) {
             std::cout << "[Chunker] ERROR: Failed to load mesh " << meshID << " for entity " << entity << " - handle is invalid" << std::endl;
             return false;
@@ -69,6 +68,29 @@ bool Chunker::LoadChunk(ChunkPos p, Batch* batch){
             chunk.LoadHandle(entity, handle, meshID);
         }
     }
+
+    */
+
+
+bool Chunker::LoadChunk(ChunkPos p, Batch* batch){
+    Chunk& chunk = chunks[p];
+    if(chunk.isLoaded) return true;
+    
+    for(size_t i = 0; i < chunk.entities.size(); i++){
+        Entity entity = chunk.entities[i];
+        int meshID = ecs->GetComponent<MeshCapsule>(entity).meshID;
+        Mesh& mesh = engine->assetManager->Get(meshID);
+        TransformComponent& transform = ecs->GetComponent<TransformComponent>(entity);
+        GPUMemoryHandle handle = batch->CPULoad(meshID, mesh, transform.GetCombined());
+        
+        if (!handle.IsValid()) {
+            std::cout << "[Chunker] ERROR: Failed to load mesh " << meshID << " for entity " << entity << " - handle is invalid" << std::endl;
+            return false;
+        } else {
+            chunk.LoadHandle(entity, handle, meshID);
+        }
+    }
+    
     SetLoaded(chunk, p);
     return true;
 }
@@ -76,7 +98,6 @@ bool Chunker::LoadChunk(ChunkPos p, Batch* batch){
 void Chunker::UnloadChunk(ChunkPos p, Batch* batch){
     Chunk& chunk = chunks[p];
     if(!chunk.isLoaded) return;
-
 
     for(size_t i = 0; i < chunk.entities.size(); i++){
         Entity entity = chunk.entities[i];
@@ -86,6 +107,10 @@ void Chunker::UnloadChunk(ChunkPos p, Batch* batch){
         batch->Unload(handle);
 
     }
+    
+    // Clear the GPU handle data
+    chunk.gpuHandles.clear();
+    chunk.entityToHandleIndex.clear();
     chunk.isLoaded = false;
 
 }
@@ -99,9 +124,10 @@ void Chunker::Start() {
     ecs->view<MeshCapsule, TransformComponent>().each([&](int entityId, MeshCapsule& m, TransformComponent& t) {
         Add(t, entityId);
     });
-    std::cout << "[Chunker] Start complete - Total chunks with entities: " << chunks.size() << std::endl;
 
-
+    TransformComponent cameraTransform;
+    cameraTransform.position = engine->camera.m_cameraPosition;
+    loadReference = Get(cameraTransform, chunkSize);
 
 }
 
@@ -109,7 +135,8 @@ void Chunker::Update(float dt) {
 
     Batch* batch = engine->GetSystem<Renderer>()->batch.get();
     
-    std::thread t(ThreadedChunker, batch);
+    //std::thread t(ThreadedChunker, batch);
+    ThreadedChunker(batch);
 }
 
 void Chunker::ThreadedChunker(Batch* batch){
@@ -132,6 +159,7 @@ void Chunker::UnloadUnbounded(Batch* batch){
     std::list<ChunkPos>::iterator it = loaded.begin();
     while (it != loaded.end()) {
         if (!InLoadedBounds(*it)) {
+            std::cout << "[Chunker] Unloading chunk " << it->toString() << " (out of bounds)" << std::endl;
             UnloadChunk(*it, batch);
             it = loaded.erase(it);
             continue;
@@ -142,6 +170,8 @@ void Chunker::UnloadUnbounded(Batch* batch){
 
 void Chunker::Render() {
 
+    Batch* batch = engine->GetSystem<Renderer>()->batch.get();
+    batch->GPULoad(engine->assetManager.get());
 }
 
 bool Chunker::InLoadedBounds(ChunkPos& p){

@@ -49,8 +49,8 @@ void TestEngine(){
 
     engine.AddSystem(std::make_unique<Game>())->name =  "GameSystem";
 
-    engine.AddSystem(std::make_unique<Renderer>(shader, layout))->name = "Renderer";
     engine.AddSystem(std::make_unique<Chunker>()) -> name = "Chunk Manager";
+    engine.AddSystem(std::make_unique<Renderer>(shader, layout))->name = "Renderer";
     
     engine.Run();
 

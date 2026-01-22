@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <unordered_map>
-#include <mutex>
+//#include <mutex>
 
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
@@ -18,13 +18,24 @@
 #include <memory>
 #include "../Components/GPUMemoryHandle.h"
 #include "../Components/MeshCapsule.h"
-
+#include "../Engine.h"
+//Forward declaration
+struct AssetManager;
 
 using Entity = int;
 struct MeshGeometryInfo {
     unsigned int indexCount;
     unsigned int indexOffset;
     int vboOffset;
+};
+
+struct GPUData{
+    GPUMemoryHandle handle;
+    int meshID;
+    glm::mat4 transform;
+    MemoryBlock vBlock;
+    MemoryBlock iBlock;
+    MemoryBlock tBlock;
 };
 
 class Batch{
@@ -51,8 +62,9 @@ public:
     std::vector<GPUMemoryHandle> drawCommands;
 
     std::unordered_map<int, MeshGeometryInfo> geometryRegistry;
+    std::vector<GPUData> gpuData;
 
-    std::mutex _mutex;
+    //std::mutex _mutex;
 
     Batch(Shader shader, size_t vertexBufferBytes = 100ull * 1024ull * 1024ull, size_t indexBufferBytes = 50ull * 1024ull * 1024ull, size_t transformBufferSize = 64ull * 1024ull * 1024ull);
     ~Batch();
@@ -66,17 +78,15 @@ public:
     void UpdateInstanceLookupBuffer(const std::vector<int>& lookupTable);
     void SetDrawVector(const std::vector<GPUMemoryHandle>& commands);
 
-    GPUMemoryHandle LoadInternal(int meshId, Mesh mesh, glm::mat4 t);
-    GPUMemoryHandle Load(MeshCapsule& m, Mesh mesh, glm::mat4 t);
-    GPUMemoryHandle Load(int meshID, Mesh mesh, glm::mat4 t);
+    GPUMemoryHandle Load(MeshCapsule& m, Mesh& mesh, glm::mat4 t);
+    GPUMemoryHandle Load(int meshID, Mesh& mesh, glm::mat4 t);
 
+    GPUMemoryHandle CPULoad(int meshID, Mesh& mesh, glm::mat4 t);
+    void GPULoad(AssetManager* assetManager);
     // Debug helper: prints details about a GPU memory handle and associated mesh
     void DebugPrintGPUMemoryHandle(const GPUMemoryHandle& handle, int meshID, const char* action);
 
 private:
-    // Ensure there is enough GPU buffer capacity for the next upload
-    void EnsureVertexCapacity(size_t neededBytes);
-    void EnsureIndexCapacity(size_t neededBytes);
-    void EnsureSSBOCapacity(size_t neededBytes);
+    GPUMemoryHandle LoadInternal(int meshId, Mesh& mesh, glm::mat4 t);
 
 };

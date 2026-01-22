@@ -61,7 +61,7 @@ void Renderer::SetCamera(glm::mat4 CameraMatrix)
 GPUMemoryHandle Renderer::LoadMesh(Entity id, MeshCapsule &m, glm::mat4 t)
 {
     Timer timer("LoadMesh", true);
-    Mesh mesh = engine->assetManager.Get(m.meshID);
+    Mesh mesh = engine->assetManager->Get(m.meshID);
 
     GPUMemoryHandle handle = batch->Load(m, mesh, t);
 

@@ -22,7 +22,7 @@ struct Heap{
     }
 
     //Allocate a block of memory of given size
-    MemoryBlock& Allocate(size_t size){
+    MemoryBlock Allocate(size_t size){
         for (size_t i = 0; i < blocks.size(); i++)
         {
             if (blocks[i].free && blocks[i].size >= size){
@@ -34,8 +34,9 @@ struct Heap{
                 if (remainingSize > 0){
                     blocks.insert(blocks.begin() + i + 1, MemoryBlock{blocks[i].offset + size, remainingSize, true});
                 }
-
-                return blocks[i];
+                // Copy and return
+                MemoryBlock result = blocks[i];
+                return result;
             }
         }
 

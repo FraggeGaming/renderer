@@ -144,10 +144,10 @@ void Game::Start()
     reader.SetReadParam(ObjReader::TEXCORD, true);
     reader.SetReadParam(ObjReader::NORMAL, true);
 
-    AssetManager& assetManager = engine->assetManager;
+    AssetManager* assetManager = engine->assetManager.get();
 
     Mesh mesh  = reader.ReadObject("Res/ObjFiles/OBJ_Files/suzanne.obj");
-    int mid = assetManager.Add(mesh);
+    int mid = assetManager->Add(mesh);
 
     {
         Entity e = engine->ecs->CreateEntity();
@@ -163,10 +163,10 @@ void Game::Start()
     }
 
     Mesh me  = reader.ReadObject("Res/ObjFiles/OBJ_Files/pokeball.obj");
-    int meid = assetManager.Add(me);
+    int meid = assetManager->Add(me);
 
     Mesh me1  = reader.ReadObject("Res/ObjFiles/OBJ_Files/teddy.obj");
-    int me1id = assetManager.Add(me1);
+    int me1id = assetManager->Add(me1);
 
     std::cout << "Added Mesh with ID: " << mid << std::endl;
 
