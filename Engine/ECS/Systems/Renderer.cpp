@@ -40,6 +40,16 @@ glm::vec3 lightPosition = glm::vec3(0.0f, 0.0f, 3.0f);
 float ambient = 0.2;
 
 
+//Maybe lock this later
+//Track the transform index for the ssbo
+std::vector<int> lookupTable;
+
+//Final draw commands to be sent to the GPU
+std::vector<GPUMemoryHandle> finalCommands;
+
+//Track the mesh instances
+std::unordered_map<int, std::vector<int>> meshGroups;
+
 Renderer::Renderer(Shader shader, VertexBufferLayout layout)
 {
     batch = std::make_unique<Batch>(shader, 1024*1024* 1024, 1024*1024, 500*64);
@@ -118,32 +128,30 @@ void Renderer::Update(float dt)
     projection = glm::perspective(glm::radians(90.0f), (float)engine->width/engine->height, 0.1f, 100.0f);
     engine->camera.CalculateFrustum((float)engine->width / (float)engine->height, 90.0f, 0.1f, 100.0f);
 
-    TransformComponent CameraTransform;
-    CameraTransform.position = engine->camera.m_cameraPosition;
-    engine->GetSystem<Chunker>()->SetLocation(CameraTransform);
-
-    //Track the mesh instances
-    std::unordered_map<int, std::vector<int>> meshGroups;
-
-    //Track the transform index for the ssbo
-    std::vector<int> lookupTable;
-
-    //Final draw commands to be sent to the GPU
-    std::vector<GPUMemoryHandle> finalCommands;
+    meshGroups.clear();
+    lookupTable.clear();
+    finalCommands.clear();
 
     std::vector<EntityDrawInfo> infoCommands = engine->GetSystem<Chunker>()->GenerateCommands();
     for(EntityDrawInfo e : infoCommands){
         TransformComponent& t = ecs->GetComponent<TransformComponent>(e.entity);
         
-        //Validate that entity is in right chunk
-        //If not, move it to the correct one
-        //Chunker.validateLoaction
-
         //Frustum culling and transform update
-        TryRender(meshGroups, t, e.MeshID, e.handle);
+        if (t.isDirty) {
+            batch->UpdateTransform(e.handle.ssboIndex, t.GetCombined());
+            t.isDirty = false;
+
+            //Validate that entity is in right chunk
+            //If not, move it to the correct one
+            //Chunker.validateLoaction
+        }
+        
+        //Frustum Culling
+        if (!engine->camera.isVisible(t)) continue;
+        
+        meshGroups[e.MeshID].push_back(e.handle.ssboIndex);
     }
-    
-    
+
     {
         Timer t("Create Draw Commands", true);
         int count = 0;
@@ -163,32 +171,24 @@ void Renderer::Update(float dt)
         }
     }
 
-    {
-        Timer t("Update Buffers", true);
-        batch->UpdateInstanceLookupBuffer(lookupTable);
-        batch->SetDrawVector(finalCommands);
-    }
-
     SetCamera(engine->camera.GetView());
-}
-
-void Renderer::TryRender(std::unordered_map<int, std::vector<int>>& meshGroups, TransformComponent& t, int meshID, GPUMemoryHandle& h)
-{
-
-    if (t.isDirty) {
-        batch->UpdateTransform(h.ssboIndex, t.GetCombined());
-        t.isDirty = false;
-    }
-    
-    //Frustum Culling
-    if (!engine->camera.isVisible(t)) return;
-    
-    meshGroups[meshID].push_back(h.ssboIndex);
 }
 
 void Renderer::Render()
 {
     Timer timer("Renderer::Render", true);
+
+    // Upload GPU data
+    batch->GPULoad(engine->assetManager.get());
+
+    {
+        //Set the transforms id in the instancebuffer
+        Timer t("Update Buffers", true);
+        batch->UpdateInstanceLookupBuffer(lookupTable);
+
+        //Set the final draw commands
+        batch->SetDrawVector(finalCommands);
+    }
     
     batch->shader.Use();
     batch->shader.SetMat4("view", glm::value_ptr(view), GL_FALSE);

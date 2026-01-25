@@ -107,7 +107,7 @@ GPUMemoryHandle Batch::CPULoad(int meshID, Mesh& mesh, glm::mat4 t){
             (unsigned int)(iblk.offset / sizeof(unsigned int)),
             (int)(vblk.offset / sizeof(Vertex))
         };
-    }
+    } 
 
     //Load the transform component
     MemoryBlock ssboBlock = transformBuffer.Reserve(sizeof(glm::mat4));

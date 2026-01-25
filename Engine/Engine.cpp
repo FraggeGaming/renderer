@@ -167,6 +167,7 @@ void Engine::Render()
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    //Seperate to render thread
     for (size_t i = 0; i < systems.size(); i++)
     {
         Timer timer("System Render: " + (systems.at(i)->name.empty() ? "<unnamed>" : systems.at(i)->name), true);

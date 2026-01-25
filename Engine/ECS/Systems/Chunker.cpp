@@ -76,6 +76,8 @@ bool Chunker::LoadChunk(ChunkPos p, Batch* batch){
     Chunk& chunk = chunks[p];
     if(chunk.isLoaded) return true;
     
+    //if(chunk.entities.size() == 0) return false;
+
     for(size_t i = 0; i < chunk.entities.size(); i++){
         Entity entity = chunk.entities[i];
         int meshID = ecs->GetComponent<MeshCapsule>(entity).meshID;
@@ -117,23 +119,24 @@ void Chunker::UnloadChunk(ChunkPos p, Batch* batch){
 
 void Chunker::Start() {
     Timer t("Chunker start", true);
-    chunkSize = 32.0f;
-    loadRadius = 2;
-
-    std::cout << "[Chunker] Start - Adding entities to chunks" << std::endl;
-    ecs->view<MeshCapsule, TransformComponent>().each([&](int entityId, MeshCapsule& m, TransformComponent& t) {
-        Add(t, entityId);
-    });
+    //chunkSize = 32.0f;
+    //loadRadius = 2;
 
     TransformComponent cameraTransform;
     cameraTransform.position = engine->camera.m_cameraPosition;
     loadReference = Get(cameraTransform, chunkSize);
+    std::cout << "[Chunker] Initial load reference set to: " << loadReference.toString() << std::endl;
 
 }
 
 void Chunker::Update(float dt) {
 
     Batch* batch = engine->GetSystem<Renderer>()->batch.get();
+    
+    // Update load reference to current camera position BEFORE loading chunks
+    TransformComponent cameraTransform;
+    cameraTransform.position = engine->camera.m_cameraPosition;
+    SetLocation(cameraTransform);
     
     //std::thread t(ThreadedChunker, batch);
     ThreadedChunker(batch);
@@ -168,9 +171,9 @@ void Chunker::UnloadUnbounded(Batch* batch){
 }
 
 void Chunker::Render() {
+    //Batch* batch = engine->GetSystem<Renderer>()->batch.get();
+    //batch->GPULoad(engine->assetManager.get());
 
-    Batch* batch = engine->GetSystem<Renderer>()->batch.get();
-    batch->GPULoad(engine->assetManager.get());
 }
 
 bool Chunker::InLoadedBounds(ChunkPos& p){

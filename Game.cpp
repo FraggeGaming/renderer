@@ -2,6 +2,7 @@
 #include "ObjReader.h"
 #include "Engine/ECS/Systems/Renderer.h"
 #include "Engine/Engine.h"
+#include "Engine/ECS/Systems/Chunker.h"
 
 void Game::CreateController(Entity e_ptr){
     float rotateSpeed = 2.0f;
@@ -27,7 +28,7 @@ void Game::CreateController(Entity e_ptr){
     });
 
     engine->ctx->input->BindKey(GLFW_KEY_C,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
-        
+        //engine->GetSystem<Chunker>()->Debug();
     });
 
     engine->ctx->input->BindKey(GLFW_KEY_K,KEY_PRESS_TYPE::TAP ,[engine, e_ptr, rotateSpeed](float dt){
